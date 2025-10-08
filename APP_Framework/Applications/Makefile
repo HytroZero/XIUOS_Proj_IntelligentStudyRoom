@@ -11,6 +11,9 @@ ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
     SRC_DIR := general_functions app_test 
 
     SRC_FILES := main.c
+
+    CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection
+    CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection/wifi
     ifeq ($(CONFIG_LIB_LV),y)
         SRC_DIR += lv_app
         SRC_DIR += tinyttf_app
