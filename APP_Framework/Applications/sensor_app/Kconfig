@@ -126,6 +126,20 @@ menu "sensor app"
                     endif
 
                 endif
+            
+            menuconfig APPLICATION_SENSOR_MOTION
+                bool "Using sensor motion apps"
+                default n
+
+                if APPLICATION_SENSOR_MOTION
+                    config APPLICATION_SENSOR_MOTION_HCSR501
+                    bool "Using sensor hcsr501 apps"
+                    default n
+
+                    if ADD_NUTTX_FEATURES
+                    endif
+
+                endif
                 
             menuconfig APPLICATION_SENSOR_WINDDIRECTION
                 bool "Using sensor wind direction apps"

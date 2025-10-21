@@ -15,6 +15,8 @@ if GetDepend(['APPLICATION_SENSOR_HUMIDITY_HS300X']):
     SOURCES = ['humidity_hs300x.c'] + SOURCES
 if GetDepend(['APPLICATION_SENSOR_TEMPERATURE_HS300X']):
     SOURCES = ['temperature_hs300x.c'] + SOURCES
+if GetDepend(['APPLICATION_SENSOR_MOTION_HCSR501']):
+    SOURCES = ['motion_hcsr501.c'] + SOURCES
 if GetDepend(['APPLICATION_SENSOR_CH4_AS830']):
     SOURCES = ['ch4_as830.c'] + SOURCES
 if GetDepend(['APPLICATION_SENSOR_HCHO']):

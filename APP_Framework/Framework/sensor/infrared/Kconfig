@@ -1,0 +1,72 @@
+
+config SENSOR_HCSR501_MOTION
+    bool "HC-SR501 Motion Sensor"
+    default n
+    help
+      Enable support for HC-SR501 PIR motion sensor
+
+if SENSOR_HCSR501_MOTION
+    config SENSOR_DEVICE_HCSR501
+        string "Sensor name"
+        default "hcsr501"
+    
+    config SENSOR_QUANTITY_HCSR501_MOTION
+        string "Quantity name"
+        default "motion_detection"
+
+    choice
+        prompt "Target Platform"
+        default HCSR501_PLATFORM_XIZI
+    
+    config HCSR501_PLATFORM_XIZI
+        bool "XiZi"
+    
+    config HCSR501_PLATFORM_NUTTX
+        bool "NuttX"
+    
+    config HCSR501_PLATFORM_RTTHREAD
+        bool "RT-Thread"
+    endchoice
+
+    if HCSR501_PLATFORM_XIZI
+        config SENSOR_DEVICE_HCSR501_GPIO_DEV
+            string "GPIO device"
+            default "/dev/gpio0"
+        
+        config SENSOR_DEVICE_HCSR501_GPIO_PIN
+            int "GPIO pin"
+            default 140
+        
+        config SENSOR_DEVICE_HCSR501_IRQ_MODE
+            int "IRQ mode"
+            default 2
+    endif
+
+    if HCSR501_PLATFORM_NUTTX
+        config SENSOR_DEVICE_HCSR501_GPIO_DEV
+            string "GPIO device"
+            default "/dev/gpio0"
+        
+        config SENSOR_DEVICE_HCSR501_GPIO_PIN
+            int "GPIO pin"
+            default 140
+        
+        config SENSOR_DEVICE_HCSR501_IRQ_MODE
+            int "IRQ mode"
+            default 2
+    endif
+
+    if HCSR501_PLATFORM_RTTHREAD
+        config SENSOR_DEVICE_HCSR501_GPIO_DEV
+            string "GPIO device"
+            default "/dev/gpio"
+        
+        config SENSOR_DEVICE_HCSR501_GPIO_PIN
+            int "GPIO pin"
+            default 140
+        
+        config SENSOR_DEVICE_HCSR501_IRQ_MODE
+            int "IRQ mode"
+            default 2
+    endif
+endif

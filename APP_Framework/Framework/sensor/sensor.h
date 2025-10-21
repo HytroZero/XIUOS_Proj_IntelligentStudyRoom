@@ -44,6 +44,7 @@ extern "C" {
 #endif
 
 /* Sensor ability */
+#define SENSOR_ABILITY_MOTION           ((uint32_t)(1 << SENSOR_QUANTITY_MOTION))  //红外判断运动状态
 #define SENSOR_ABILITY_CO2              ((uint32_t)(1 << SENSOR_QUANTITY_CO2))
 #define SENSOR_ABILITY_TEMP             ((uint32_t)(1 << SENSOR_QUANTITY_TEMP))
 #define SENSOR_ABILITY_HUMI             ((uint32_t)(1 << SENSOR_QUANTITY_HUMI))
@@ -121,6 +122,8 @@ enum SensorQuantityType {
     SENSOR_QUANTITY_C2H5OH,
     SENSOR_QUANTITY_AQS,
     SENSOR_QUANTITY_PM1,
+    SENSOR_QUANTITY_TESTRED,    //测试红外传感器
+    SENSOR_QUANTITY_MOTION,
     /* ...... */
     SENSIR_QUANTITY_INTEGRATION,
     SENSOR_QUANTITY_END,

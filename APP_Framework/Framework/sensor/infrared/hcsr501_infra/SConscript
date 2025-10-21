@@ -1,0 +1,10 @@
+from building import *
+import os
+
+cwd = GetCurrentDir()
+src = []
+if GetDepend(['SENSOR_HCSR501_INFRARED']):
+    src += ['hcsr501.c']
+group = DefineGroup('sensor infrared hcsr501', src, depend = [], CPPPATH = [cwd])
+
+Return('group')

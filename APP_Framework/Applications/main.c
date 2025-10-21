@@ -16,12 +16,14 @@
 #include <transform.h>
 #include <adapter_wifi.h>
 #include <adapter.h>         
+// #include "sensor_app/motion_hcsr501.c"
 
 #define WIFI_SSID       "Factory"      
 #define WIFI_PASSWORD   "00000000" 
 
 extern int FrameworkInit();
 extern void ApplicationOtaTaskInit(void);
+extern void MotionHcSr501(void);
 
 int WifiInitAndConnect(void)
 {
@@ -97,9 +99,10 @@ int main(void)
 #ifdef APPLICATION_WEBSERVER
     webserver();
 #endif
-
+    
 
     WifiInitAndConnect();
+    MotionHcSr501();
     return 0;
 }
 // int cppmain(void);

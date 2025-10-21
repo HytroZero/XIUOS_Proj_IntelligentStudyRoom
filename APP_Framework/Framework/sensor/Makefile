@@ -51,6 +51,10 @@ ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
         SRC_DIR += humidity
     endif
 
+    ifeq ($(CONFIG_SENSOR_INFRARED),y)
+        SRC_DIR += infrared
+    endif
+
     ifeq ($(CONFIG_SENSOR_WINDSPEED),y)
         SRC_DIR += windspeed
     endif
