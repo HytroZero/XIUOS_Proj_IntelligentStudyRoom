@@ -31,11 +31,11 @@ if SENSOR_HCSR501_MOTION
     if HCSR501_PLATFORM_XIZI
         config SENSOR_DEVICE_HCSR501_GPIO_DEV
             string "GPIO device"
-            default "/dev/gpio0"
+            default "/dev/pin_dev"
         
         config SENSOR_DEVICE_HCSR501_GPIO_PIN
             int "GPIO pin"
-            default 140
+            default 35
         
         config SENSOR_DEVICE_HCSR501_IRQ_MODE
             int "IRQ mode"
@@ -45,11 +45,11 @@ if SENSOR_HCSR501_MOTION
     if HCSR501_PLATFORM_NUTTX
         config SENSOR_DEVICE_HCSR501_GPIO_DEV
             string "GPIO device"
-            default "/dev/gpio0"
+            default "/dev/pin_dev"
         
         config SENSOR_DEVICE_HCSR501_GPIO_PIN
             int "GPIO pin"
-            default 140
+            default 35
         
         config SENSOR_DEVICE_HCSR501_IRQ_MODE
             int "IRQ mode"
@@ -59,11 +59,11 @@ if SENSOR_HCSR501_MOTION
     if HCSR501_PLATFORM_RTTHREAD
         config SENSOR_DEVICE_HCSR501_GPIO_DEV
             string "GPIO device"
-            default "/dev/gpio"
+            default "/dev/pin_dev"
         
         config SENSOR_DEVICE_HCSR501_GPIO_PIN
             int "GPIO pin"
-            default 140
+            default 35
         
         config SENSOR_DEVICE_HCSR501_IRQ_MODE
             int "IRQ mode"

@@ -11,17 +11,21 @@
  */
 
 #include <sensor.h>
-#include <device.h>
-#include <transform.h>
-#include <stdio.h>
-#include <string.h>
-#include <board.h>  // 包含Kconfig生成的配置头文件
+// #include <device.h>
+// #include <transform.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <board.h>  // 包含Kconfig生成的配置头文件
 
 /********************* 配置宏定义（从Kconfig获取） *********************/
-#define HC_SR501_DEVICE_NAME      CONFIG_SENSOR_DEVICE_HCSR501
-#define HC_SR501_GPIO_DEV         CONFIG_SENSOR_DEVICE_HCSR501_GPIO_DEV
-#define HC_SR501_GPIO_PIN         CONFIG_SENSOR_DEVICE_HCSR501_GPIO_PIN
-#define HC_SR501_IRQ_MODE         CONFIG_SENSOR_DEVICE_HCSR501_IRQ_MODE
+#define HC_SR501_DEVICE_NAME      SENSOR_DEVICE_HCSR501
+#define HC_SR501_GPIO_DEV         SENSOR_DEVICE_HCSR501_GPIO_DEV
+#define HC_SR501_GPIO_PIN         SENSOR_DEVICE_HCSR501_GPIO_PIN
+#define HC_SR501_IRQ_MODE         SENSOR_DEVICE_HCSR501_IRQ_MODE
+
+#define GPIO_IRQ_REGISTER                0xfffffffe
+#define GPIO_IRQ_ENABLE                  0xfffffffb
+#define GPIO_IRQ_DISABLE                 0xfffffffc
 
 /********************* 全局变量 *********************/
 static struct SensorDevice hc_sr501;
@@ -169,8 +173,13 @@ void SensorDeviceHcSr501Init(void)
     
     // 注册传感器
     SensorDeviceRegister(&hc_sr501);
+}
+
+int HcSr501Init(void)
+{
+    SensorDeviceHcSr501Init();
     
-    // 初始化运动检测量
+        // 初始化运动检测量
     hc_sr501_motion.name = SENSOR_QUANTITY_HCSR501_MOTION;
     hc_sr501_motion.type = SENSOR_QUANTITY_MOTION;
     hc_sr501_motion.value.decimal_places = 0;
@@ -181,6 +190,8 @@ void SensorDeviceHcSr501Init(void)
     
     // 注册传感器量
     SensorQuantityRegister(&hc_sr501_motion);
+
+    return 0;
 }
 
 /********************* Shell测试接口 *********************/

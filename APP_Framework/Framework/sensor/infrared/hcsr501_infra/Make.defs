@@ -1,6 +1,6 @@
 ############################################################################
 # APP_Framework/Framework/sensor/infrared/hcsr501_infra/Make.defs
 ############################################################################
-ifneq ($(CONFIG_SENSOR_HCSR501_INFRARED),)
+ifneq ($(CONFIG_SENSOR_HCSR501_MOTION),)
 CONFIGURED_APPS += $(APPDIR)/../../../APP_Framework/Framework/sensor/infrared/hcsr501_infra
 endif

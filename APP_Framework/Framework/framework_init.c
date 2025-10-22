@@ -41,6 +41,7 @@ extern int Tb600bTvoc10TvocInit(void);
 extern int Tb600bWqHcho1osInit(void);
 extern int QsFxWindDirectionInit(void);
 extern int QsFsWindSpeedInit(void);
+extern int HcSr501Init(void);
 
 extern int lv_port_init(void);
 
@@ -98,6 +99,12 @@ static struct InitDesc sensor_desc[] =
 #endif
 #ifdef SENSOR_QUANTITY_HS300X_HUMIDITY
 	{ "hs300x_humidity", Hs300xHumidityInit },
+#endif
+#endif
+
+#ifdef SENSOR_DEVICE_HCSR501
+#ifdef SENSOR_QUANTITY_HCSR501_MOTION
+	{ "hcsr501_motion", HcSr501Init},
 #endif
 #endif
 
