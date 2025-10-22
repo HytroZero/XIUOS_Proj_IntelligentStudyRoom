@@ -41,18 +41,18 @@ void MotionHcSr501(void)
     SensorQuantityOpen(motion);
     
     /* 连续读取10次运动状态 */
-    for (i = 0; i < 10; i++) {
-        motion_state = SensorQuantityReadValue(motion);
+    // for (i = 0; i < 10000; i++) {
+    //     motion_state = SensorQuantityReadValue(motion);
         
-        /* 打印运动状态 */
-        printf("Motion state: %s\n", motion_state ? "DETECTED" : "IDLE");
+    //     /* 打印运动状态 */
+    //     printf("Motion state: %s\n", motion_state ? "DETECTED" : "IDLE");
         
-        /* 延迟500ms */
-        PrivTaskDelay(500);
-    }
+    //     /* 延迟500ms */
+    //     PrivTaskDelay(500);
+    // }
     
     /* 关闭传感器量 */
-    SensorQuantityClose(motion);
+    // SensorQuantityClose(motion);
 }
 
 #ifdef USING_SHELL

@@ -101,8 +101,9 @@ int main(void)
 #endif
     
 
-    WifiInitAndConnect();
+    // WifiInitAndConnect();
     MotionHcSr501();
+    while(1);
     return 0;
 }
 // int cppmain(void);
