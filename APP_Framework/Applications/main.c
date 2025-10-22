@@ -24,6 +24,7 @@
 extern int FrameworkInit();
 extern void ApplicationOtaTaskInit(void);
 extern void MotionHcSr501(void);
+extern void TempDht22(void);
 
 int WifiInitAndConnect(void)
 {
@@ -102,8 +103,8 @@ int main(void)
     
 
     // WifiInitAndConnect();
-    MotionHcSr501();
-    while(1);
+    // MotionHcSr501();
+    TempDht22();
     return 0;
 }
 // int cppmain(void);

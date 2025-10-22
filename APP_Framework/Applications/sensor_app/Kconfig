@@ -113,6 +113,16 @@ menu "sensor app"
 
                 endif
 
+                if APPLICATION_SENSOR_TEMPERATURE
+                    config APPLICATION_SENSOR_TEMPERATURE_DHT22
+                    bool "Using sensor DHT22 apps"
+                    default n
+                    
+                    if ADD_NUTTX_FEATURES
+                    endif
+
+                endif
+
             menuconfig APPLICATION_SENSOR_HUMIDITY
                 bool "Using sensor humidity apps"
                 default n

@@ -43,3 +43,52 @@ config SENSOR_HS300X_TEMPERATURE
 
                 endif
         endif
+
+
+config SENSOR_DHT22_TEMPERATURE
+        bool "Using DHT22 for temperature"
+        default n
+
+        if SENSOR_DHT22_TEMPERATURE
+                config SENSOR_DEVICE_DHT22
+                        string "DHT22 sensor name"
+                        default "dht22"
+                
+                config SENSOR_QUANTITY_DHT22_TEMPERATURE
+                        string "DHT22 quantity name"
+                        default "temperature_2"
+                
+                if ADD_XIZI_FEATURES
+                        config SENSOR_DEVICE_DHT22_DEV
+                                string "DHT22 device name"
+                                default "/dev/pin_dev"
+
+                                
+                        config SENSOR_DEVICE_DHT22_GPIO_PIN
+                                int "GPIO pin"
+                                default 35
+
+                endif
+
+                if ADD_NUTTX_FEATURES
+                        config SENSOR_DEVICE_DHT22_DEV
+                                string "DHT22 device name"
+                                default "/dev/pin_dev"
+
+                        config SENSOR_DEVICE_DHT22_GPIO_PIN
+                                int "GPIO pin"
+                                default 35
+
+                endif
+
+                if ADD_RTTHREAD_FEATURES
+                        config SENSOR_DEVICE_DHT22_DEV
+                                string "DHT22 device name"
+                                default "/dev/pin_dev"
+
+                        config SENSOR_DEVICE_DHT22_GPIO_PIN
+                                int "GPIO pin"
+                                default 35
+
+                endif
+        endif

@@ -1,0 +1,6 @@
+############################################################################
+# APP_Framework/Framework/sensor/temperature/dht22_temp/Make.defs
+############################################################################
+ifneq ($(CONFIG_SENSOR_DHT22_TEMPERATURE),)
+CONFIGURED_APPS += $(APPDIR)/../../../APP_Framework/Framework/sensor/temperature/dht22_temp
+endif
