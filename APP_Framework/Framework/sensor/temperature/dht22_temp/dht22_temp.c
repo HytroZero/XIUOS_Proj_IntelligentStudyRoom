@@ -27,6 +27,7 @@
 #define DHT22_BIT_0_MAX_DURATION         28      /* 0位高电平<28us */
 #define DHT22_BIT_1_MIN_DURATION         70      /* 1位高电平>70us */
 #define DHT22_SAMPLING_INTERVAL_MS       2000    /* 采样间隔2秒 */
+#define NULL_PARAMETER 0
 
 static struct SensorDevice dht22;
 
@@ -88,12 +89,12 @@ static int DHT22_ConfigPinMode(struct SensorDevice *sdev, int mode)
  * @param level - 电平值 (0:低电平, 1:高电平)
  * @return success : 0 error : -1
  */
-static int DHT22_SetPinLevel(struct SensorDevice *sdev, int level)
+static int DHT22_SetPinLevel(struct SensorDevice *sdev, uint16_t level)
 {
     struct PinStat pin_stat;
     
-    /* 首先确保引脚设置为输出模式 */
-    if (DHT22_ConfigPinMode(sdev, 1) != 0) {
+    /* 低电平输出，高电平输入 */
+    if (DHT22_ConfigPinMode(sdev, GPIO_CFG_OUTPUT) != 0) {
         printf("[ERR] Cannot set output mode before level setting\n");
         return -1;
     }
@@ -104,7 +105,7 @@ static int DHT22_SetPinLevel(struct SensorDevice *sdev, int level)
     
     // printf("Setting GPIO pin %ld to level %d\n", pin_stat.pin, level);
     
-    if (PrivWrite(sdev->fd, &pin_stat, sizeof(pin_stat)) < 0) {
+    if (PrivWrite(sdev->fd, &pin_stat, NULL_PARAMETER) < 0) {
         printf("[ERR] Set GPIO pin %ld level %d failed\n", pin_stat.pin, level);
         return -1;
     }
@@ -125,7 +126,7 @@ static int DHT22_ReadPinLevel(struct SensorDevice *sdev)
     pin_stat.pin = SENSOR_DEVICE_DHT22_GPIO_PIN;
 
     /* 使用PrivRead读取电平值 */
-    if (PrivRead(sdev->fd, &pin_stat, sizeof(pin_stat)) < 0) {
+    if (PrivRead(sdev->fd, &pin_stat, NULL_PARAMETER) < 0) {
         printf("Read GPIO pin %ld level failed\n", pin_stat.pin);
         return -1;
     }
@@ -151,9 +152,10 @@ static int DHT22_SendStartSignal(struct SensorDevice *sdev)
         printf("DHT22 set pin low failed\n");
         return -1;
     }
-    
+
     /* 精确的500us延时 */
     DHT22_DelayUs(DHT22_START_SIGNAL_DURATION);
+    
     
     /* 2. 释放总线（拉高） */
     ret = DHT22_SetPinLevel(sdev, GPIO_HIGH);
@@ -161,7 +163,14 @@ static int DHT22_SendStartSignal(struct SensorDevice *sdev)
         printf("DHT22 set pin high failed\n");
         return -1;
     }
-    
+
+    if (DHT22_ConfigPinMode(sdev, GPIO_CFG_INPUT) != 0) {
+        printf("[ERR] Cannot set output mode before level setting\n");
+        return -1;
+    }
+
+    int testLevel = DHT22_ReadPinLevel(sdev);
+    printf("test level result : %d\n", testLevel);
     /* 3. 短暂延时后开始检测响应 */
     DHT22_DelayUs(30);
     
@@ -189,6 +198,9 @@ static int DHT22_WaitResponse(struct SensorDevice *sdev)
         return -1;
     }
     
+    int testLevel = DHT22_ReadPinLevel(sdev);
+    printf("waitRes test level result : %d , waste time : %d\n", testLevel, 1000-timeout);
+
     timeout = DHT22_RESPONSE_TIMEOUT;
     /* 等待DHT22拉高总线（80us高电平准备信号） */
     while (timeout--) {
@@ -200,6 +212,9 @@ static int DHT22_WaitResponse(struct SensorDevice *sdev)
         printf("DHT22 response timeout (wait high level)\n");
         return -1;
     }
+
+    testLevel = DHT22_ReadPinLevel(sdev);
+    printf("waitRes test level result : %d , waste time : %d\n", testLevel, 1000-timeout);
     
     return 0;
 }
@@ -239,6 +254,7 @@ static uint8_t DHT22_ReadBit(struct SensorDevice *sdev)
         }
     }
     
+    printf("duration: %u\n", high_duration);
     /* 根据高电平持续时间判断数据位 - 符合说明书时序规范 */
     if (high_duration > DHT22_BIT_1_MIN_DURATION) {
         return 1;  /* 高电平持续时间长（>70us），表示1 */
@@ -332,42 +348,42 @@ static int DHT22_HardwareCheck(struct SensorDevice *sdev)
  * @param sdev - 传感器设备指针
  * @return success : 0 error : -1
  */
-static int DHT22_CommunicationDiagnostic(struct SensorDevice *sdev)
-{
-    printf("=== DHT22 Communication Diagnostic ===\n");
+// static int DHT22_CommunicationDiagnostic(struct SensorDevice *sdev)
+// {
+//     printf("=== DHT22 Communication Diagnostic ===\n");
     
-    /* 测试总线空闲状态 */
-    printf("1. Testing bus idle state...\n");
-    int idle_level = DHT22_ReadPinLevel(sdev);
-    printf("Bus idle level: %d (expected: 1)\n", idle_level);
+//     /* 测试总线空闲状态 */
+//     printf("1. Testing bus idle state...\n");
+//     int idle_level = DHT22_ReadPinLevel(sdev);
+//     printf("Bus idle level: %d (expected: 1)\n", idle_level);
     
-    if (idle_level != 1) {
-        printf("WARNING: Bus not at high level when idle\n");
-    }
+//     if (idle_level != 1) {
+//         printf("WARNING: Bus not at high level when idle\n");
+//     }
     
-    /* 测试起始信号 */
-    printf("2. Testing start signal...\n");
-    if (DHT22_SendStartSignal(sdev) != 0) {
-        printf("FAIL: Start signal generation\n");
-        return -1;
-    }
-    printf("PASS: Start signal generated\n");
+//     /* 测试起始信号 */
+//     printf("2. Testing start signal...\n");
+//     if (DHT22_SendStartSignal(sdev) != 0) {
+//         printf("FAIL: Start signal generation\n");
+//         return -1;
+//     }
+//     printf("PASS: Start signal generated\n");
     
-    /* 测试响应检测 */
-    printf("3. Testing response detection...\n");
-    if (DHT22_EnhancedWaitResponse(sdev) != 0) {
-        printf("FAIL: No response from DHT22\n");
+//     /* 测试响应检测 */
+//     printf("3. Testing response detection...\n");
+//     if (DHT22_EnhancedWaitResponse(sdev) != 0) {
+//         printf("FAIL: No response from DHT22\n");
         
-        /* 检查总线状态 */
-        int bus_state = DHT22_ReadPinLevel(sdev);
-        printf("Current bus state: %d\n", bus_state);
-        return -1;
-    }
-    printf("PASS: DHT22 responded correctly\n");
+//         /* 检查总线状态 */
+//         int bus_state = DHT22_ReadPinLevel(sdev);
+//         printf("Current bus state: %d\n", bus_state);
+//         return -1;
+//     }
+//     printf("PASS: DHT22 responded correctly\n");
     
-    printf("=== Communication Diagnostic COMPLETED ===\n");
-    return 0;
-}
+//     printf("=== Communication Diagnostic COMPLETED ===\n");
+//     return 0;
+// }
 
 /**
  * @description: 打开DHT22传感器设备
@@ -411,6 +427,11 @@ static int SensorDeviceRead(struct SensorDevice *sdev, size_t len)
     // }
 
     printf("Starting DHT22 communication protocol...\n");
+
+    if(sdev->fd < 0){
+        printf("open pin fd error:%d\n", sdev->fd);
+        return -1;
+    }
     
     /* 完整的DHT22通信流程 */
     ret = DHT22_SendStartSignal(sdev);
