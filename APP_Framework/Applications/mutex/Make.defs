@@ -1,0 +1,6 @@
+############################################################################
+# APP_Framework/Applications/mutex/Make.defs
+############################################################################
+ifneq ($(CONFIG_APPLICATION_MUTEX),)
+CONFIGURED_APPS += $(APPDIR)/../../../APP_Framework/Applications/mutex
+endif

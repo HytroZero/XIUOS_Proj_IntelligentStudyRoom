@@ -122,8 +122,8 @@ enum SensorQuantityType {
     SENSOR_QUANTITY_C2H5OH,
     SENSOR_QUANTITY_AQS,
     SENSOR_QUANTITY_PM1,
-    SENSOR_QUANTITY_TESTRED,    //测试红外传感器
-    SENSOR_QUANTITY_MOTION,     //红外传感器测运动状态
+    SENSOR_QUANTITY_TESTRED,    //测试红外传感器,废案
+    SENSOR_QUANTITY_MOTION,     //红外传感器测运动状态，废案
     /* ...... */
     SENSIR_QUANTITY_INTEGRATION,
     SENSOR_QUANTITY_END,

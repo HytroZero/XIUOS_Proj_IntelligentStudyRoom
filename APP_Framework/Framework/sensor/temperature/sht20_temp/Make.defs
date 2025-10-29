@@ -1,0 +1,6 @@
+############################################################################
+# APP_Framework/Framework/sensor/temperature/sht20_temp/Make.defs
+############################################################################
+ifneq ($(CONFIG_SENSOR_SHT20_TEMPERATURE),)
+CONFIGURED_APPS += $(APPDIR)/../../../APP_Framework/Framework/sensor/temperature/sht20_temp
+endif

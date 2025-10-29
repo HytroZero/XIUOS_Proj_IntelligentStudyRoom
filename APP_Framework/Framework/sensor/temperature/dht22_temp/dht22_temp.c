@@ -181,9 +181,9 @@ static int DHT22_SendStartSignal(struct SensorDevice *sdev)
         return -1;
     }
 
-    int testLevel = DHT22_ReadPinLevel(sdev);
-    printf("test level result : %d\n", testLevel);
-    /* 3. 短暂延时后开始检测响应 */
+    // int testLevel = DHT22_ReadPinLevel(sdev);
+    // printf("test level result : %d\n", testLevel);
+    // /* 3. 短暂延时后开始检测响应 */
     DHT22_DelayUs(30);
     
     return 0;

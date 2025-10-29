@@ -1,0 +1,7 @@
+menu "mutex"
+
+    menuconfig APPLICATION_MUTEX
+        bool "Using mutex"
+        default n
+
+endmenu

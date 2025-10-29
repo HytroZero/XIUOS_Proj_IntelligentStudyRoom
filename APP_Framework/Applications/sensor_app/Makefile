@@ -115,12 +115,20 @@ ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
         SRC_FILES += humidity_hs300x.c
     endif
 
+    ifeq ($(CONFIG_APPLICATION_SENSOR_HUMIDITY_SHT20), y)
+        SRC_FILES += humidity_sht20.c
+    endif
+
     ifeq ($(CONFIG_APPLICATION_SENSOR_TEMPERATURE_HS300X), y)
         SRC_FILES += temperature_hs300x.c
     endif
 
     ifeq ($(CONFIG_APPLICATION_SENSOR_TEMPERATURE_DHT22), y)
         SRC_FILES += temperature_dht22.c
+    endif
+
+    ifeq ($(CONFIG_APPLICATION_SENSOR_TEMPERATURE_SHT20), y)
+        SRC_FILES += temperature_sht20.c
     endif
 
     ifeq ($(CONFIG_APPLICATION_SENSOR_MOTION_HCSR501), y)

@@ -92,3 +92,48 @@ config SENSOR_DHT22_TEMPERATURE
 
                 endif
         endif
+
+config SENSOR_SHT20_TEMPERATURE
+        bool "Using SHT20 for temperature"
+        default n
+
+        if SENSOR_SHT20_TEMPERATURE
+                config SENSOR_DEVICE_SHT20
+                        string "SHT20 sensor name"
+                        default "sht20_1"
+                
+                config SENSOR_QUANTITY_SHT20_TEMPERATURE
+                        string "sht20 quantity name"
+                        default "temperature_1"
+                
+                if ADD_XIZI_FEATURES
+                        config SENSOR_DEVICE_SHT20_DEV
+                                string "SHT20 device name"
+                                default "/dev/i2c1_dev0"
+                                
+                        config SENSOR_DEVICE_SHT20_I2C_ADDR
+                                hex "SHT20 device i2c address"
+                                default 0x40
+                endif
+
+                if ADD_NUTTX_FEATURES
+                        config SENSOR_DEVICE_SHT20_DEV
+                                string "SHT20 device name"
+                                default "/dev/i2c1_dev0"
+                        
+                        config SENSOR_DEVICE_SHT20_I2C_ADDR
+                                hex "SHT20 device i2c address"
+                                default 0x40
+
+                endif
+
+                if ADD_RTTHREAD_FEATURES
+                        config SENSOR_DEVICE_SHT20_DEV
+                                string "SHT20 device name"
+                                default "/dev/i2c1"
+                       config SENSOR_DEVICE_SHT20_I2C_ADDR
+                                hex "SHT20 device i2c address"
+                                default 0x40
+
+                endif
+        endif

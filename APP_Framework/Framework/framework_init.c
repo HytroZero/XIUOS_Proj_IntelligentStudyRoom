@@ -43,6 +43,8 @@ extern int QsFxWindDirectionInit(void);
 extern int QsFsWindSpeedInit(void);
 extern int HcSr501Init(void);
 extern int Dht22TemperatureInit(void);
+extern int Sht20TemperatureInit(void);
+extern int Sht20HumidityInit(void);
 
 extern int lv_port_init(void);
 
@@ -100,6 +102,15 @@ static struct InitDesc sensor_desc[] =
 #endif
 #ifdef SENSOR_QUANTITY_HS300X_HUMIDITY
 	{ "hs300x_humidity", Hs300xHumidityInit },
+#endif
+#endif
+
+#ifdef SENSOR_DEVICE_SHT20
+#ifdef SENSOR_QUANTITY_SHT20_TEMPERATURE
+	{ "sht20_temperature", Sht20TemperatureInit },
+#endif
+#ifdef SENSOR_QUANTITY_SHT20_HUMIDITY
+	{ "sht20_humidity", Sht20HumidityInit },
 #endif
 #endif
 

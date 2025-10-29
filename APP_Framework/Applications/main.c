@@ -20,12 +20,82 @@
 
 #define WIFI_SSID       "Factory"      
 #define WIFI_PASSWORD   "00000000" 
+/* 任务配置参数 */
+#define TEMPERATURE_TASK_PRIORITY    20
+#define HUMIDITY_TASK_PRIORITY       21
+#define SENSOR_TASK_STACK_SIZE      2048
+#define SENSOR_RUN_CYCLES            10   /* 运行周期数 */
+#define LOCK_TIMEOUT_MS             1000  /* 锁获取超时时间 */
+
+static int32_t temperature_task_id = -1;
+static int32_t humidity_task_id = -1;
+static uint8_t temperature_task_run = 1;
+static uint8_t humidity_task_run = 1;
 
 extern int FrameworkInit();
 extern void ApplicationOtaTaskInit(void);
-extern void MotionHcSr501(void);
-extern void TempDht22(void);
-extern void TestGpio(void);
+
+
+
+#ifdef OTA_BY_PLATFORM
+extern int OtaTask(void);
+#endif
+
+#ifdef APPLICATION_WEBSERVER
+extern int webserver(void);
+#endif
+
+
+
+int main(void)
+{
+    printf("\nHello, world!\n");
+    FrameworkInit();
+#ifdef APPLICATION_OTA
+    ApplicationOtaTaskInit();
+#endif
+
+#ifdef OTA_BY_PLATFORM
+    OtaTask();
+#endif
+
+#ifdef APPLICATION_WEBSERVER
+    webserver();
+#endif
+    
+
+    // WifiInitAndConnect();
+    // TempSht20();
+    // HumiSht20();
+    /* 6. 创建并行传感器任务 */
+
+    printf("7. Creating parallel sensor tasks...\n");
+    if (CreateAndStartSensorTasks() < 0) {
+        printf(" Failed to create sensor tasks\n");
+        return -1;
+    }
+    printf(" Parallel tasks created and started\n");
+    
+    // /* 7. 主任务监控 */
+    // printf("\n"
+    //        "===============================================\n"
+    //        "        Starting Parallel Sensor Monitoring     \n"
+    //        "===============================================\n\n");
+    
+    // MonitorSensorTasks();
+    
+    /* 8. 清理资源 */
+    // printf("\n"
+    //        "===============================================\n"
+    //        "          System Shutdown Sequence            \n"
+    //        "===============================================\n\n");
+    
+    // StopSensorTasks();
+    
+    return 0;
+}
+// int cppmain(void);
+
 
 int WifiInitAndConnect(void)
 {
@@ -76,39 +146,174 @@ int WifiInitAndConnect(void)
     return ret;
 }
 
-#ifdef OTA_BY_PLATFORM
-extern int OtaTask(void);
-#endif
-
-#ifdef APPLICATION_WEBSERVER
-extern int webserver(void);
-#endif
-
-
-
-int main(void)
+/**
+ * @description: 温度传感器任务函数
+ * @param parameter - 任务参数
+ */
+void TemperatureTask(void *parameter)
 {
-    printf("\nHello, world!\n");
-    FrameworkInit();
-#ifdef APPLICATION_OTA
-    ApplicationOtaTaskInit();
-#endif
+    printf(" Temperature sensor task started (ID: %d)\n", UserGetTaskID());
+    int32_t temperature;
+    int cycle_count = 0;
+    struct SensorQuantity* temp = GetTempQuantity();
+    while (temperature_task_run && cycle_count < SENSOR_RUN_CYCLES) {
+        printf("\n=== Temperature Measurement Cycle %d ===\n", cycle_count + 1);
+        
+        if (SensorLock(LOCK_TIMEOUT_MS) == 0){
+            temperature = SensorQuantityReadValue(temp);
+            SensorUnlock();
+            if (temperature > 0)
+                printf("Temperature : %d.%d C\n", temperature/10, temperature%10);
+            else
+                printf("Temperature : %d.%d C\n", temperature/10, -temperature%10);
+        }
+        /* 任务延迟5秒 */
+        UserTaskDelay(3000);
+        cycle_count++;
+    }
+    SensorQuantityClose(temp);
+    // printf(" Temperature task completed after %d cycles\n", cycle_count);
+    UserTaskQuit();
+}
 
-#ifdef OTA_BY_PLATFORM
-    OtaTask();
-#endif
-
-#ifdef APPLICATION_WEBSERVER
-    webserver();
-#endif
+/**
+ * @description: 湿度传感器任务函数
+ * @param parameter - 任务参数
+ */
+void HumidityTask(void *parameter)
+{
+    printf(" Humidity sensor task started (ID: %d)\n", UserGetTaskID());
     
+    int cycle_count = 0;
+    int32_t humidity;
+    struct SensorQuantity *humi = GetHumiQuantity();
+    while (humidity_task_run && cycle_count < SENSOR_RUN_CYCLES) {
+        printf("\n=== Humidity Measurement Cycle %d ===\n", cycle_count + 1);
+        if (SensorLock(LOCK_TIMEOUT_MS) == 0){
+            humidity = SensorQuantityReadValue(humi);
+            SensorUnlock();
+            printf("Humidity : %d.%d %%RH\n", humidity/10, humidity%10);
+        }
+        
+        /* 任务延迟3秒（与温度任务不同的周期） */
+        UserTaskDelay(3000);
+        cycle_count++;
+    }
+    SensorQuantityClose(humi);
 
-    // WifiInitAndConnect();
-    // MotionHcSr501();
-    // TestGpio();
-    TempDht22();
+    // printf(" Humidity task completed after %d cycles\n", cycle_count);
+    UserTaskQuit();
+}
+
+/**
+ * @description: 创建并启动传感器任务
+ * @return 成功: 0, 失败: -1
+ */
+int CreateAndStartSensorTasks(void)
+{
+    UtaskType temp_task, humi_task;
+    
+    printf(" Initializing sensor tasks...\n");
+    SensorMutexInit();
+    /* 创建温度传感器任务 */
+    strncpy(temp_task.name, "temp_task", NAME_NUM_MAX - 1);
+    temp_task.func_entry = (void *)TemperatureTask;
+    temp_task.func_param = (void *)&temperature_task_run;
+    temp_task.stack_size = SENSOR_TASK_STACK_SIZE;
+    temp_task.prio = TEMPERATURE_TASK_PRIORITY;
+    
+    temperature_task_id = UserTaskCreate(temp_task);
+    if (temperature_task_id < 0) {
+        printf(" Failed to create temperature task\n");
+        return -1;
+    }
+    
+    /* 创建湿度传感器任务 */
+    strncpy(humi_task.name, "humi_task", NAME_NUM_MAX - 1);
+    humi_task.func_entry = (void *)HumidityTask;
+    humi_task.func_param = (void *)&humidity_task_run;
+    humi_task.stack_size = SENSOR_TASK_STACK_SIZE;
+    humi_task.prio = HUMIDITY_TASK_PRIORITY;
+    
+    humidity_task_id = UserTaskCreate(humi_task);
+    if (humidity_task_id < 0) {
+        printf(" Failed to create humidity task\n");
+        UserTaskDelete(temperature_task_id);
+        return -1;
+    }
+    
+    /* 启动任务 */
+    if (UserTaskStartup(temperature_task_id) != EOK) {
+        printf(" Failed to start temperature task\n");
+        return -1;
+    }
+    
+    UserTaskDelay(1000);
+    if (UserTaskStartup(humidity_task_id) != EOK) {
+        printf(" Failed to start humidity task\n");
+        UserTaskDelete(temperature_task_id);
+        return -1;
+    }
+    
+    printf(" Sensor tasks created successfully:\n");
+    printf("   - Temperature Task: ID=%d, Priority=%d\n", temperature_task_id, TEMPERATURE_TASK_PRIORITY);
+    printf("   - Humidity Task: ID=%d, Priority=%d\n", humidity_task_id, HUMIDITY_TASK_PRIORITY);
+    
     return 0;
 }
-// int cppmain(void);
 
+/**
+ * @description: 停止传感器任务
+ */
+void StopSensorTasks(void)
+{
+    printf(" Stopping sensor tasks...\n");
+    
+    temperature_task_run = 0;
+    humidity_task_run = 0;
+    
+    /* 给任务一些时间正常退出 */
+    UserTaskDelay(200);
+    
+    /* 强制删除任务 */
+    if (temperature_task_id >= 0) {
+        UserTaskDelete(temperature_task_id);
+        temperature_task_id = -1;
+    }
+    
+    if (humidity_task_id >= 0) {
+        UserTaskDelete(humidity_task_id);
+        humidity_task_id = -1;
+    }
+    
+    printf("✅ Sensor tasks stopped successfully\n");
+}
 
+/**
+ * @description: 监控任务状态
+ */
+void MonitorSensorTasks(void)
+{
+    int monitor_count = 0;
+    
+    printf(" Starting task monitoring...\n");
+    
+    while (monitor_count < SENSOR_RUN_CYCLES * 2) {
+        char temp_name[NAME_NUM_MAX], humi_name[NAME_NUM_MAX];
+        uint8_t temp_stat, humi_stat;
+        
+        UserGetTaskName(temperature_task_id, temp_name);
+        UserGetTaskName(humidity_task_id, humi_name);
+        temp_stat = UserGetTaskStat(temperature_task_id);
+        humi_stat = UserGetTaskStat(humidity_task_id);
+        
+        printf("\n--- Task Status Monitor (Cycle %d) ---\n", monitor_count + 1);
+        printf("Temperature Task: ID=%d, Name=%s, State=%d\n", 
+               temperature_task_id, temp_name, temp_stat);
+        printf("Humidity Task: ID=%d, Name=%s, State=%d\n", 
+               humidity_task_id, humi_name, humi_stat);
+        
+        UserTaskDelay(5000);  /* 每5秒监控一次 */
+        monitor_count++;
+    }
+}

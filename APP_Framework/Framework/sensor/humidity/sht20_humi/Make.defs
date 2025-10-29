@@ -1,0 +1,6 @@
+############################################################################
+# APP_Framework/Framework/sensor/humidity/sht20_humi/Make.defs
+############################################################################
+ifneq ($(CONFIG_SENSOR_SHT20_HUMIDITY),)
+CONFIGURED_APPS += $(APPDIR)/../../../APP_Framework/Framework/sensor/humidity/sht20_humi
+endif

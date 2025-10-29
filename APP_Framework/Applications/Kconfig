@@ -21,4 +21,6 @@ menu "Applications"
     source "$APP_DIR/Applications/embedded_database_app/Kconfig"
     source "$APP_DIR/Applications/webnet/Kconfig"
     source "$APP_DIR/Applications/webserver/Kconfig"
+    source "$APP_DIR/Applications/mutex/Kconfig"
+    
 endmenu
