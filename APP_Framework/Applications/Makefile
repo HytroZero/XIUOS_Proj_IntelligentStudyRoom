@@ -12,8 +12,8 @@ ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
 
     SRC_FILES := main.c
 
-    CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection
-    CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection/wifi
+#     CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection
+#     CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection/wifi
     ifeq ($(CONFIG_LIB_LV),y)
         SRC_DIR += lv_app
         SRC_DIR += tinyttf_app
@@ -29,6 +29,10 @@ ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
 
     ifeq ($(CONFIG_APPLICATION_MUTEX),y)
         SRC_DIR += mutex
+    endif
+
+    ifeq ($(CONFIG_APPLICATION_APP),y)
+        SRC_DIR += app
     endif
 
     ifeq ($(CONFIG_APPLICATION_CONNECTION),y)

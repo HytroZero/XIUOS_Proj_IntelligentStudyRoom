@@ -1,0 +1,7 @@
+menu "app"
+
+    menuconfig APPLICATION_APP
+        bool "Using app"
+        default n
+
+endmenu
