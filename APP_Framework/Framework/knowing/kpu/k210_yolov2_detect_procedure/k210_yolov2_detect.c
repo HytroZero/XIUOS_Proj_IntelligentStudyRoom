@@ -30,6 +30,7 @@ kpu_model_context_t detect_task;
 static region_layer_t detect_rl;
 static obj_info_t detect_info;
 volatile uint32_t g_ai_done_flag;
+static volatile int Object_ExistOrNot = 0;//people exist or not
 
 static void ai_done(void *ctx) { g_ai_done_flag = 1; }
 
@@ -321,7 +322,10 @@ static void *thread_detect_entry(void *parameter)
         detect_rl.input = (float*)(output_buffer.buffer);
 #endif
         region_layer_run(&detect_rl, &detect_info);
-        printf("detect_info.obj_number:%d\n", detect_info.obj_number);
+        // printf("detect_info.obj_number:%d\n", detect_info.obj_number);
+        if(detect_info.obj_number != 0){Object_ExistOrNot = 1;}
+        else Object_ExistOrNot = 0;
+        printf("MQTT_Transmission_Pipeline_whether_detect_people: %d\n", Object_ExistOrNot);
         /* display result */
         for (int cnt = 0; cnt < detect_info.obj_number; cnt++)
         {
@@ -329,9 +333,9 @@ static void *thread_detect_entry(void *parameter)
             detect_info.obj[cnt].y2 += (detect_params.sensor_output_size[0] - detect_params.net_input_size[0]) / 2;
             draw_edge((uint32_t *)showbuffer, &detect_info, cnt, 0xF800, (uint16_t)detect_params.sensor_output_size[1],
                       (uint16_t)detect_params.sensor_output_size[0]);
-            printf("%d: (%d, %d, %d, %d) cls: %s conf: %f\t", cnt, detect_info.obj[cnt].x1, detect_info.obj[cnt].y1,
-                   detect_info.obj[cnt].x2, detect_info.obj[cnt].y2, detect_params.labels[detect_info.obj[cnt].class_id],
-                   detect_info.obj[cnt].prob);
+            // printf("%d: (%d, %d, %d, %d) cls: %s conf: %f\t", cnt, detect_info.obj[cnt].x1, detect_info.obj[cnt].y1,
+            //        detect_info.obj[cnt].x2, detect_info.obj[cnt].y2, detect_params.labels[detect_info.obj[cnt].class_id],
+            //        detect_info.obj[cnt].prob);
         }
 #ifdef BSP_USING_LCD
 
