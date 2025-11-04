@@ -12,12 +12,13 @@
 
 #include <stdio.h>
 #include <string.h>
-// #include <user_api.h>
 #include <transform.h>
+
 
 extern int FrameworkInit();
 extern void ApplicationOtaTaskInit(void);
 extern void k210_detect(char *json_file_path);
+
 int main(void)
 {
 	printf("Hello, world!!!\n Running on edu-riscv\n");
@@ -25,6 +26,29 @@ int main(void)
 #ifdef APPLICATION_OTA
 	ApplicationOtaTaskInit();
 #endif
+
+#ifdef OTA_BY_PLATFORM
+    OtaTask();
+#endif
+
+#ifdef APPLICATION_WEBSERVER
+    webserver();
+#endif
+    
+
+    WifiInitAndConnect();
+    MqttTest();
+    // printf("7. Creating parallel sensor tasks...\n");
+    // if (CreateAndStartTasks() < 0) {
+    //     printf(" Failed to create sensor tasks\n");
+    //     return -1;
+    // }
+    // printf(" Parallel tasks created and started\n");
+    
+    // MonitorSensorTasks();
+
+    // StopSensorTasks();
+    
     k210_detect("face.json");
     return 0;
 }

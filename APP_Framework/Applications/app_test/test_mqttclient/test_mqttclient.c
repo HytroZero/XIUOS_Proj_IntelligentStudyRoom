@@ -47,15 +47,15 @@
 #define LWIP_MQTT_DEMO_TASK_STACK_SIZE        4096
 #define LWIP_MQTT_DEMO_TASK_PRIO              20
 
-static char mqtt_demo_ipaddr[] = {192, 168, 130, 77};
-static char mqtt_demo_netmask[] = {255, 255, 254, 0};
-static char mqtt_demo_gwaddr[] = {192, 168, 130, 1};
+static char mqtt_demo_ipaddr[] = {192, 168, 76, 154};
+static char mqtt_demo_netmask[] = {255, 255, 255, 0};
+static char mqtt_demo_gwaddr[] = {192, 168, 76, 136};
 
 static pthread_t mqtt_client_task;
 static pthread_t mqtt_server_task;
 
 static uint16_t mqtt_socket_port = 1883;
-static char mqtt_ip_str[128] = {192,168,100,1};
+static char mqtt_ip_str[] = "192.168.76.154";
 
 void MqttSocketConfigParam(char *ip_str)
 {
