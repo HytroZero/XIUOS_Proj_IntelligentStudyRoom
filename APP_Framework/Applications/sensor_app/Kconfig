@@ -101,7 +101,7 @@ menu "sensor app"
 
             menuconfig APPLICATION_SENSOR_TEMPERATURE
                 bool "Using sensor temperature apps"
-                default n
+                default y
 
                 if APPLICATION_SENSOR_TEMPERATURE
                     config APPLICATION_SENSOR_TEMPERATURE_HS300X
@@ -126,7 +126,7 @@ menu "sensor app"
                 if APPLICATION_SENSOR_TEMPERATURE
                     config APPLICATION_SENSOR_TEMPERATURE_SHT20
                     bool "Using sensor SHT20 apps"
-                    default n
+                    default y
                     
                     if ADD_NUTTX_FEATURES
                     endif
@@ -135,7 +135,7 @@ menu "sensor app"
 
             menuconfig APPLICATION_SENSOR_HUMIDITY
                 bool "Using sensor humidity apps"
-                default n
+                default y
 
                 if APPLICATION_SENSOR_HUMIDITY
                     config APPLICATION_SENSOR_HUMIDITY_HS300X
@@ -150,7 +150,7 @@ menu "sensor app"
                 if APPLICATION_SENSOR_HUMIDITY
                     config APPLICATION_SENSOR_HUMIDITY_SHT20
                     bool "Using sensor SHT20 apps"
-                    default n
+                    default y
 
                     if ADD_NUTTX_FEATURES
                     endif

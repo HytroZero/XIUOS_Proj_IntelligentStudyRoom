@@ -29,40 +29,28 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 {
-    int ret;
-    int pid;
+    int ret ;
+    int pid ;
     char task_name[32] = {0};
     static int utask_id = 0;
-    UtaskType task;
-    pthread_args_t *pthread_args = (pthread_args_t *)arg;
+    UtaskType task ;
 
     if (NULL == attr) {
         task.prio = KTASK_PRIORITY_MAX / 2;
-        task.stack_size = 4096;
+        task.stack_size = 4096 ;
     } else {
-        task.prio = attr->schedparam.sched_priority;
-        task.stack_size = attr->stacksize;
+        task.prio = attr->schedparam.sched_priority ;
+        task.stack_size = attr->stacksize ;
     }
 
-    task.func_entry = start_routine;
-
-    if (NULL == pthread_args) {
-        task.func_param = NULL;
-        snprintf(task_name, sizeof(task_name) - 1, "utask%02d", utask_id++);
-    } else {
-        task.func_param = pthread_args->arg;
-        if (NULL == pthread_args->pthread_name) {
-            snprintf(task_name, sizeof(task_name) - 1, "utask%02d", utask_id++);
-        } else {
-            snprintf(task_name, sizeof(task_name) - 1, pthread_args->pthread_name);
-        } 
-    }
-
+    task.func_entry = start_routine ;
+    task.func_param = arg;
+    snprintf(task_name, sizeof(task_name) - 1, "utask%02d",utask_id++);
     memcpy(task.name , task_name, sizeof(task_name) - 1);
 
     pid = UserTaskCreate(task);
     if (pid < 0)
-        return -1;
+      return -1 ;
     
     ret = UserTaskStartup(pid);
     *thread = (pthread_t)(long)pid;

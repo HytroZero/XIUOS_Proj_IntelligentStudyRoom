@@ -1,10 +1,10 @@
 if BSP_USING_I2C
     config BSP_I2C_SDA
         int "SDA pin number for I2C"
-        default 15
+        default 34
     config BSP_I2C_SCL
         int "SCLK pin number for I2C"
-        default 17
+        default 35
     config I2C_BUS_NAME_1
         string "i2c bus 1 name"
         default "i2c1"

@@ -9,7 +9,7 @@ menuconfig BSP_USING_CH376
 
 menuconfig BSP_USING_SPI
     bool "Using SPI device"
-    default n
+    default y
     select RESOURCES_SPI
     select BSP_USING_DMA
     if BSP_USING_SPI
@@ -18,7 +18,7 @@ menuconfig BSP_USING_SPI
 
 menuconfig BSP_USING_SOFT_SPI
     bool "Using TFcard device"
-    default n
+    default y
     select BSP_USING_SPI
     select MOUNT_SDCARD
     select RESOURCES_SPI_SD
@@ -28,12 +28,12 @@ menuconfig BSP_USING_SOFT_SPI
 
 menuconfig BSP_USING_LCD
     bool "Using LCD device"
-    default n
+    default y
     select BSP_USING_SPI
     select RESOURCES_LCD
     if BSP_USING_LCD
         source "$BSP_DIR/third_party_driver/lcd/Kconfig"
-    endif 
+    endif
 
 menuconfig BSP_USING_DMA
     bool "Using DMA device"
@@ -52,7 +52,7 @@ menuconfig BSP_USING_GPIO
 
 menuconfig BSP_USING_I2C
     bool "Using I2C device"
-    default n
+    default y
     select RESOURCES_I2C
     if BSP_USING_I2C
         source "$BSP_DIR/third_party_driver/i2c/Kconfig"
@@ -124,7 +124,7 @@ menuconfig BSP_USING_WIZCHIP
 
 menuconfig BSP_USING_CAMERA
     bool "Using camera device"
-    default n
+    default y
     select RESOURCES_CAMERA
     if BSP_USING_CAMERA
         source "$BSP_DIR/third_party_driver/dvp/Kconfig"
@@ -132,7 +132,7 @@ menuconfig BSP_USING_CAMERA
 
 menuconfig BSP_USING_KPU
     bool "Using kpu device"
-    default n
+    default y
     select RESOURCES_KPU
     if BSP_USING_KPU
         source "$BSP_DIR/third_party_driver/kpu/Kconfig"

@@ -1,5 +1,5 @@
 menu "lib using cJSON"
     menuconfig LIB_USING_CJSON
         bool "USING cJSON"
-        default n
+        default y
 endmenu

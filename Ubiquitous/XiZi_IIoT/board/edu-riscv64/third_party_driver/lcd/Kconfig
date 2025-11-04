@@ -1,4 +1,3 @@
-
 if BSP_USING_LCD
     config LCD_BUS_NAME
         string "lcd bus name"
