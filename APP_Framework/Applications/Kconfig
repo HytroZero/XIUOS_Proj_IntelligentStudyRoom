@@ -3,7 +3,7 @@ menu "Applications"
     menu "config stack size and priority of main task"
         config MAIN_KTASK_STACK_SIZE
             int "Set main task stack size"
-            default 1024
+            default 409600
         config MAIN_KTASK_PRIORITY
             int
             default 4  if KTASK_PRIORITY_8

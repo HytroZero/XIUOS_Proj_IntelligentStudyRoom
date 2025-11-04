@@ -95,7 +95,7 @@ config SENSOR_DHT22_TEMPERATURE
 
 config SENSOR_SHT20_TEMPERATURE
         bool "Using SHT20 for temperature"
-        default n
+        default y
 
         if SENSOR_SHT20_TEMPERATURE
                 config SENSOR_DEVICE_SHT20

@@ -48,7 +48,7 @@ config SENSOR_HS300X_HUMIDITY
 
 config SENSOR_SHT20_HUMIDITY 
         bool "Using SHT20 for humidity"
-        default n
+        default y
 
         if SENSOR_SHT20_HUMIDITY
                 config SENSOR_DEVICE_SHT20

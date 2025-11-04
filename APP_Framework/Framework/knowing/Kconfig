@@ -1,6 +1,6 @@
 menuconfig SUPPORT_KNOWING_FRAMEWORK
         bool "support knowing framework"
-        default n
+        default y
         select TRANSFORM_LAYER_ATTRIUBUTE
 
 if SUPPORT_KNOWING_FRAMEWORK

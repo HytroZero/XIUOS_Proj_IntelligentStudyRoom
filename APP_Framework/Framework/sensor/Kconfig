@@ -1,6 +1,6 @@
 menuconfig SUPPORT_SENSOR_FRAMEWORK
         bool "support sensor framework"
-        default n
+        default y
         select TRANSFORM_LAYER_ATTRIUBUTE
 
 if SUPPORT_SENSOR_FRAMEWORK
@@ -55,14 +55,14 @@ if SUPPORT_SENSOR_FRAMEWORK
 
         menuconfig SENSOR_TEMPERATURE
                 bool "Using temperature sensor device"
-                default n
+                default y
         if SENSOR_TEMPERATURE
         source "$APP_DIR/Framework/sensor/temperature/Kconfig"
         endif
 
         menuconfig SENSOR_HUMIDITY
                 bool "Using humidity sensor device"
-                default n
+                default y
         if SENSOR_HUMIDITY
         source "$APP_DIR/Framework/sensor/humidity/Kconfig"
         endif
