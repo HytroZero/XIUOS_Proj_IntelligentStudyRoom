@@ -9,8 +9,8 @@ endif
 
 ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
 
-    CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection
-    CFLAGS += -I/home/blapapple/xiuos_2/xiuos/APP_Framework/Framework/connection/wifi
+    CFLAGS += -I/home/xiuos/test/XIUOS_Proj_IntelligentStudyRoom/APP_Framework/Framework/connection
+    CFLAGS += -I/home/xiuos/test/XIUOS_Proj_IntelligentStudyRoom/xiuos/APP_Framework/Framework/connection/wifi
     
     SRC_FILES := $(wildcard *.c)
 
