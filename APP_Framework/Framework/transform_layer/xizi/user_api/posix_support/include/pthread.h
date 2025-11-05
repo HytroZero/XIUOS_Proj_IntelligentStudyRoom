@@ -72,7 +72,11 @@ extern "C" {
 
 typedef int   pid_t;
 // typedef int pthread_mutex_t ;
-
+typedef struct pthread_args
+{
+    void *arg;
+    const char *pthread_name;
+}pthread_args_t;
 /* scheduling algorithms */
 #define SCHED_OTHER		0
 #define SCHED_FIFO		1

@@ -25,8 +25,11 @@
 #include "include/semaphore.h"
 #include "include/pthread.h"
 
-static sem_t timer_sem;
-static pthread_t timer_task;
+#define TIMER_NUM 20
+
+static sem_t timer_sem[TIMER_NUM];
+static pthread_t timer_task[TIMER_NUM];
+static char timer_idx[TIMER_NUM];
 
 struct timer_func {
     union sigval value;
@@ -34,16 +37,17 @@ struct timer_func {
     void (* user_timer_function)(union sigval val);
 };
 
-struct timer_func g_timer_func;
+struct timer_func g_timer_func[TIMER_NUM];
 
 static void *timer_callback(void *args) 
 {
-    struct sigevent *evp = (struct sigevent *)args;
+    clockid_t clockid = *((clockid_t *)args);
 
     while (1) {
-        if (g_timer_func.user_timer_function != NULL) {
-            if (0 == sem_timedwait(&timer_sem, NULL)) {
-                g_timer_func.user_timer_function(g_timer_func.value);
+        if (g_timer_func[clockid].user_timer_function != NULL) {
+            if (0 == sem_timedwait(&(timer_sem[clockid]), NULL)) {
+                g_timer_func[clockid].value.sival_ptr = &clockid;
+                g_timer_func[clockid].user_timer_function(g_timer_func[clockid].value);
             }
         }
     }
@@ -66,32 +70,39 @@ int timer_create(clockid_t clockid, struct sigevent * evp, timer_t * timerid)
     }
 
     memset(timer_name, 0, sizeof(timer_name));
-    snprintf(timer_name, sizeof(timer_name), "timer_%d", clockid);
+    snprintf(timer_name, sizeof(timer_name), "timer_%ld", clockid);
 
-    sem_init(&timer_sem, 0, 0);
+    sem_init(&(timer_sem[clockid]), 0, 0);
 
-    g_timer_func.value = evp->sigev_value;
-    g_timer_func.user_timer_function = evp->sigev_notify_function;
-    g_timer_func.timer_flags = *(int *)(evp->sigev_notify_attributes);
+    g_timer_func[clockid].value = evp->sigev_value;
+    g_timer_func[clockid].user_timer_function = evp->sigev_notify_function;
+    g_timer_func[clockid].timer_flags = *(int *)(evp->sigev_notify_attributes);
 
     pthread_attr_t attr;
     attr.schedparam.sched_priority = 22;
     attr.stacksize = 2048;
 
-    pthread_create(&timer_task, &attr, &timer_callback, (void *)evp);
-    
-    timer_id = UserTimerCreate(timer_name, NULL, (void *)&timer_sem, 1000, g_timer_func.timer_flags);
+    pthread_args_t args;
+    args.pthread_name = timer_name;
+    args.arg = &clockid;
+
+    pthread_create(&(timer_task[clockid]), &attr, &timer_callback, (void *)&args);
+
+    timer_id = UserTimerCreate(timer_name, NULL, (void *)&(timer_sem[clockid]), clockid, g_timer_func[clockid].timer_flags);
     *timerid = timer_id;
     return timer_id;
 }
 
 int timer_delete(timer_t timerid)
 {
-    pthread_kill(timer_task, 0);
+    sem_t sem;
+    int timer_id = timerid;
+    pthread_kill(timer_task[timer_id], 0);
     
     UserTimerQuitRun(timerid);
 
-    sem_destroy(&timer_sem);
+    sem = timer_sem[timer_id];
+    sem_destroy(&sem);
 
     return 0;
 }

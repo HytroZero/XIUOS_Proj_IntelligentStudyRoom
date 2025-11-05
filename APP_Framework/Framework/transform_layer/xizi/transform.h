@@ -43,6 +43,9 @@ extern "C" {
 
 #define NAME_NUM_MAX            32
 
+#define LINKLIST_FLAG_FIFO      0x00           
+#define LINKLIST_FLAG_PRIO      0x01
+
 #ifndef EVENT_AND
 #define EVENT_AND          (1 << 0)
 #endif
@@ -168,7 +171,8 @@ struct SerialDataCfg
     uint8_t serial_invert_mode;
     uint16_t serial_buffer_size;
     int32 serial_timeout;
-
+    
+    int (*dev_recv_callback) (void *dev, size_t length);
     uint8_t is_ext_uart;
     uint8_t ext_uart_no;
     enum ExtSerialPortConfigure port_configure;
@@ -425,6 +429,13 @@ int PrivTaskDelay(int32_t ms);
 int PrivUserTaskSearch(void);
 uint32_t PrivGetTickTime();
 
+/*********************Files**************************/
+int PrivLseek(int fd, off_t offset, int whence);
+int PrivFsync(int fd);
+int PrivFstat(int fd, struct stat *buf);
+int PrivStat(const char *path, struct stat *buf);
+int PrivUnlink(const char *path);
+char *PrivGetcwd(char *buf, size_t size);
 /*********************driver*************************/
 
 int PrivOpen(const char *path, int flags, ...);

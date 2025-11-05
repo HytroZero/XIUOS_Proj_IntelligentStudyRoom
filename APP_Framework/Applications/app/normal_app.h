@@ -5,7 +5,6 @@
 #include <cJSON.h>
 #include "mqtt/MQTTPacket.h"
 #include "mqtt/MQTTSubscribe.h"
-#include "mqtt/transport.h"
 
 #define WIFI_SSID       "Factory"      
 #define WIFI_PASSWORD   "00000000" 

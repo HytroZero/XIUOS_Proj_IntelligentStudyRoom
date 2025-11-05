@@ -163,6 +163,36 @@ int PrivTimerModify(timer_t timerid, int flags, const struct itimerspec *restric
 
 /*********************fs**************************/
 #ifdef FS_VFS
+/************************Files Posix Transform***********************/
+int PrivLseek(int fd, off_t offset, int whence)
+{
+    return lseek(fd, offset, whence);
+}
+
+int PrivFsync(int fd)
+{
+    return fsync(fd);
+}
+
+int PrivFstat(int fd, struct stat *buf)
+{
+    return fstat(fd, buf);
+}
+
+int PrivStat(const char *path, struct stat *buf)
+{
+    return stat(path, buf);
+}
+
+int PrivUnlink(const char *path)
+{
+    return unlink(path);
+}
+
+char *PrivGetcwd(char *buf, size_t size)
+{
+    return getcwd(buf, size);
+}
 /************************Driver Posix Transform***********************/
 int PrivOpen(const char *path, int flags, ...)
 {
@@ -206,7 +236,7 @@ static int PrivLcdIoctl(int fd, int cmd, void *args)
 
 int PrivIoctl(int fd, int cmd, void *args)
 {
-    int ret;
+    int ret = -ERROR;
     struct PrivIoctlCfg *ioctl_cfg = (struct PrivIoctlCfg *)args;
     switch (ioctl_cfg->ioctl_driver_type)
     {
