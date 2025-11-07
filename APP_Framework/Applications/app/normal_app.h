@@ -5,6 +5,7 @@
 #include <cJSON.h>
 #include "mqtt/MQTTPacket.h"
 #include "mqtt/MQTTSubscribe.h"
+#define lw_print printf
 
 #define WIFI_SSID       "4001"      
 #define WIFI_PASSWORD   "nmsmshsa" 
@@ -18,7 +19,7 @@
 #define SENSOR_TASK_STACK_SIZE      2048
 #define MQTT_TASK_STACK_SIZE      4096
 #define DETECT_TASK_STACK_SIZE      409600
-#define DETECT_RECEIVE_TASK_PRIORITY   2048
+#define DETECT_RECEIVE_TASK_STACK_SIZE     2048
 #define SENSOR_RUN_CYCLES            10   /* 运行周期数，我改成死循环了 */
 #define LOCK_TIMEOUT_MS             1000  /* 锁获取超时时间 */
 

@@ -2,7 +2,7 @@ menu "sensor app"
 
     menuconfig APPLICATION_SENSOR
         bool "Using sensor apps"
-        default n
+        default y
 
         if APPLICATION_SENSOR
             menuconfig APPLICATION_SENSOR_HCHO

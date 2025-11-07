@@ -87,7 +87,7 @@ void HumidityTask(void *parameter)
     int cycle_count = 0;
     int32_t humidity;
     struct SensorQuantity *humi = GetHumiQuantity();
-    while (humidity_task_run && /* cycle_count < SENSOR_RUN_CYCLES */ ) { // 死循环
+    while (humidity_task_run /*  && cycle_count < SENSOR_RUN_CYCLES */ ) { // 死循环
         printf("\n=== Humidity Measurement Cycle %d ===\n", cycle_count + 1);
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
             humidity = SensorQuantityReadValue(humi);
@@ -237,21 +237,19 @@ int CreateAndStartTasks(void)
     // }
 
 
-    // UserTaskDelay(100);
-    // if (UserTaskStartup(detect_task_id) != EOK) {
-    //     printf(" Failed to start detect task\n");
-    //     UserTaskDelete(detect_task_id);
-    //     return -1;
-    // }
+    UserTaskDelay(100);
+    if (UserTaskStartup(detect_task_id) != EOK) {
+        printf(" Failed to start detect task\n");
+        UserTaskDelete(detect_task_id);
+        return -1;
+    }
 
-    // UserTaskDelay(100);
-    // if (UserTaskStartup(detect_receive_task_id) != EOK) {
-    //     printf(" Failed to start detect_receive task\n");
-    //     UserTaskDelete(detect_receive_task_id);
-    //     return -1;
-    // }
-
-
+    UserTaskDelay(100);
+    if (UserTaskStartup(detect_receive_task_id) != EOK) {
+        printf(" Failed to start detect_receive task\n");
+        UserTaskDelete(detect_receive_task_id);
+        return -1;
+    }
 
     printf(" tasks created successfully:\n");
     printf("   - Temperature Task: ID=%d, Priority=%d\n", temperature_task_id, TEMPERATURE_TASK_PRIORITY);

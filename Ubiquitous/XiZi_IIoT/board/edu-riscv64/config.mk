@@ -23,7 +23,6 @@ export CROSS_COMPILE ?=/opt/gnu-mcu-eclipse/riscv-none-gcc/8.2.0-2.1-20190425-10
 # pyf >>>>>>>
 # export CROSS_COMPILE ?=~/.local/xPacks/@gnu-mcu-eclipse/riscv-none-gcc/8.2.0-2.1.1/.content/bin/riscv-none-embed-
 
-
 export DEFINES := -DHAVE_CCONFIG_H -DHAVE_SIGINFO -DRISCV_LWIP
 
 export ARCH = risc-v
