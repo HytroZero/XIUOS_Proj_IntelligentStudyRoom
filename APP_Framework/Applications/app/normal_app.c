@@ -56,7 +56,7 @@ void TemperatureTask(void *parameter)
     int32_t temperature;
     int cycle_count = 0;
     struct SensorQuantity* temp = GetTempQuantity();
-    while (temperature_task_run && cycle_count < SENSOR_RUN_CYCLES) {
+    while (temperature_task_run /* && cycle_count < SENSOR_RUN_CYCLES*/) {  // 死循环
         printf("\n=== Temperature Measurement Cycle %d ===\n", cycle_count + 1);
         
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
@@ -71,9 +71,9 @@ void TemperatureTask(void *parameter)
         UserTaskDelay(3000);
         cycle_count++;
     }
-    SensorQuantityClose(temp);
+    // SensorQuantityClose(temp);
     // printf(" Temperature task completed after %d cycles\n", cycle_count);
-    UserTaskQuit();
+    // UserTaskQuit();
 }
 
 /**
@@ -87,7 +87,7 @@ void HumidityTask(void *parameter)
     int cycle_count = 0;
     int32_t humidity;
     struct SensorQuantity *humi = GetHumiQuantity();
-    while (humidity_task_run && cycle_count < SENSOR_RUN_CYCLES) {
+    while (humidity_task_run && /* cycle_count < SENSOR_RUN_CYCLES */ ) { // 死循环
         printf("\n=== Humidity Measurement Cycle %d ===\n", cycle_count + 1);
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
             humidity = SensorQuantityReadValue(humi);
@@ -98,11 +98,37 @@ void HumidityTask(void *parameter)
         UserTaskDelay(3000);
         cycle_count++;
     }
-    SensorQuantityClose(humi);
-
+    //SensorQuantityClose(humi);
     // printf(" Humidity task completed after %d cycles\n", cycle_count);
-    UserTaskQuit();
+    // UserTaskQuit(); 
 }
+
+/**
+ * @description: k210人脸识别任务函数
+ * @param parameter - 任务参数
+ */
+void DetectTask(void *parameter)
+{
+    printf(" K210 detect task started (ID: %d)\n", UserGetTaskID());
+    k210_detect("face.json");
+}
+
+extern volatile int object_exist_or_not;
+/**
+ * @description: 用来接收k210人脸识别任务函数运行时产生的结果 object_exist_or_not
+ * @param parameter - 任务参数
+ */
+void DetectReceiveTask(void *parameter) {
+    printf(" Receive detect task started (ID: %d)\n", UserGetTaskID());
+    int cycle_count = 0;
+    while (detect_task_run) {
+        printf("\n=== Detect Measurement Cycle %d ===\n", cycle_count + 1);
+        printf("Data: object_exist_or_not: %d\n", object_exist_or_not);
+        UserTaskDelay(3000);
+        cycle_count++;
+    }
+}
+
 
 /**
  * @description: 创建并启动传感器任务
@@ -110,7 +136,7 @@ void HumidityTask(void *parameter)
  */
 int CreateAndStartTasks(void)
 {
-    UtaskType temp_task, humi_task, mqtt_task;
+    UtaskType temp_task, humi_task, mqtt_task, detect_task, detect_receive_task;
     
     printf(" Initializing sensor tasks...\n");
     SensorMutexInit();
@@ -157,6 +183,38 @@ int CreateAndStartTasks(void)
         printf("MQTT edge device task created successfully, ID: %d\n", mqtt_task_id);
     }
 	
+    /* 创建k210人脸识别任务 */
+    strncpy(detect_task.name, "detect_task", NAME_NUM_MAX - 1);
+    detect_task.func_entry = (void *)DetectTask;
+    detect_task.func_param = NULL;
+    detect_task.stack_size = DETECT_TASK_STACK_SIZE;
+    detect_task.prio = DETECT_TASK_PRIORITY;
+    
+    detect_task_id = UserTaskCreate(detect_task);
+    if (detect_task_id < 0) {
+        printf(" Failed to create detect task\n");
+		UserTaskDelete(detect_task_id);
+        return -1;
+    } else {
+        printf("detect task created successfully, ID: %d\n", detect_task_id);
+    }
+	
+    /* 创建接收Detect任务 */
+    strncpy(detect_receive_task.name, "detect_receive_task", NAME_NUM_MAX - 1);
+    detect_receive_task.func_entry = (void *)DetectReceiveTask;
+    detect_receive_task.func_param = NULL;
+    detect_receive_task.stack_size = DETECT_RECEIVE_TASK_STACK_SIZE;
+    detect_receive_task.prio = DETECT_RECEIVE_TASK_PRIORITY;
+    
+    detect_receive_task_id = UserTaskCreate(detect_receive_task);
+    if (detect_receive_task_id < 0) {
+        printf(" Failed to create detect_receive task\n");
+		UserTaskDelete(detect_receive_task_id);
+        return -1;
+    } else {
+        printf("detect_receive task created successfully, ID: %d\n", detect_receive_task_id);
+    }
+
     // /* 启动任务 */
     // if (UserTaskStartup(temperature_task_id) != EOK) {
     //     printf(" Failed to start temperature task\n");
@@ -171,17 +229,36 @@ int CreateAndStartTasks(void)
     //     return -1;
     // }
 
-	UserTaskDelay(100);
-    if (UserTaskStartup(mqtt_task_id) != EOK) {
-        printf(" Failed to start mqtt task\n");
-        UserTaskDelete(mqtt_task_id);
-        return -1;
-    }
-    
+	// UserTaskDelay(100);
+    // if (UserTaskStartup(mqtt_task_id) != EOK) {
+    //     printf(" Failed to start mqtt task\n");
+    //     UserTaskDelete(mqtt_task_id);
+    //     return -1;
+    // }
+
+
+    // UserTaskDelay(100);
+    // if (UserTaskStartup(detect_task_id) != EOK) {
+    //     printf(" Failed to start detect task\n");
+    //     UserTaskDelete(detect_task_id);
+    //     return -1;
+    // }
+
+    // UserTaskDelay(100);
+    // if (UserTaskStartup(detect_receive_task_id) != EOK) {
+    //     printf(" Failed to start detect_receive task\n");
+    //     UserTaskDelete(detect_receive_task_id);
+    //     return -1;
+    // }
+
+
+
     printf(" tasks created successfully:\n");
     printf("   - Temperature Task: ID=%d, Priority=%d\n", temperature_task_id, TEMPERATURE_TASK_PRIORITY);
     printf("   - Humidity Task: ID=%d, Priority=%d\n", humidity_task_id, HUMIDITY_TASK_PRIORITY);
 	printf("   - MQTT Task: ID=%d, Priority=%d\n", mqtt_task_id, MQTT_TASK_PRIORITY);
+    printf("   - Detect Task: ID=%d, Priority=%d\n", detect_task_id, DETECT_TASK_PRIORITY);
+    printf("   - Detect_Receive Task: ID=%d, Priority=%d\n", detect_receive_task_id, DETECT_RECEIVE_TASK_PRIORITY);
     
     return 0;
 }

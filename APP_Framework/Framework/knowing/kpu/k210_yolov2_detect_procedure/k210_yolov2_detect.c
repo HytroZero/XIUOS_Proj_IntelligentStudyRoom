@@ -9,6 +9,7 @@
 #define STACK_SIZE (128 * 1024)
 #define THREAD_PRIORITY_D (11)
 
+
 static dmac_channel_number_t dma_ch = DMAC_CHANNEL_MAX - 1;
 static _ioctl_shoot_para shoot_para_t = {0};
 
@@ -30,10 +31,9 @@ kpu_model_context_t detect_task;
 static region_layer_t detect_rl;
 static obj_info_t detect_info;
 volatile uint32_t g_ai_done_flag;
-static volatile int Object_ExistOrNot = 0;//people exist or not
+volatile int object_exist_or_not = 0;//people exist or not
 
 static void ai_done(void *ctx) { g_ai_done_flag = 1; }
-
 
 void k210_detect(char *json_file_path)
 {
@@ -323,10 +323,9 @@ static void *thread_detect_entry(void *parameter)
 #endif
         region_layer_run(&detect_rl, &detect_info);
         // printf("detect_info.obj_number:%d\n", detect_info.obj_number);
-        if(detect_info.obj_number != 0){Object_ExistOrNot = 1;}
-        else Object_ExistOrNot = 0;
-        printf("MQTT_Transmission_Pipeline_whether_detect_people: %d\n", Object_ExistOrNot);
-        /* display result */
+
+        object_exist_or_not = (detect_info.obj_number == 0) ? 0 : 1;
+
         for (int cnt = 0; cnt < detect_info.obj_number; cnt++)
         {
             detect_info.obj[cnt].y1 += (detect_params.sensor_output_size[0] - detect_params.net_input_size[0]) / 2;

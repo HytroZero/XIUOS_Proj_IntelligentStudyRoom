@@ -21,7 +21,7 @@ extern void k210_detect(char *json_file_path);
 
 int main(void)
 {
-	printf("Hello, world!!!\n Running on edu-riscv\n");
+	printf("Intellij_Study_Room\n Running on edu-riscv\n");
 	FrameworkInit();
 #ifdef APPLICATION_OTA
 	ApplicationOtaTaskInit();
@@ -34,24 +34,19 @@ int main(void)
 #ifdef APPLICATION_WEBSERVER
     webserver();
 #endif
-    
 
-    WifiInitAndConnect();
-    MqttTest();
-    // printf("7. Creating parallel sensor tasks...\n");
-    // if (CreateAndStartTasks() < 0) {
-    //     printf(" Failed to create sensor tasks\n");
-    //     return -1;
-    // }
-    // printf(" Parallel tasks created and started\n");
-    
+    // WifiInitAndConnect();
+    // MqttTest();
     // MonitorSensorTasks();
-
     // StopSensorTasks();
-    
-    k210_detect("face.json");
+    // k210_detect("face.json");
+    printf("Creating parallel tasks for all...\n");
+    if (CreateAndStartTasks() < 0) {
+        printf("Failed to create tasks for all...\n");
+        return -1;
+    }
+    printf("Parallel tasks created and started\n");
     return 0;
 }
-// int cppmain(void);
 
 
