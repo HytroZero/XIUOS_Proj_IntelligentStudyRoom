@@ -17,11 +17,11 @@ export APPLFLAGS := -mcmodel=medany -march=rv64imafdc -mabi=lp64d -nostartfiles 
 
 export CXXFLAGS := -mcmodel=medany -march=rv64imafdc -mabi=lp64d -fno-common -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -O0 -ggdb -Werror -std=gnu++11
 
-# <<<<<<< Updated upstream
-# export CROSS_COMPILE ?=/opt/gnu-mcu-eclipse/riscv-none-gcc/8.2.0-2.1-20190425-1021/bin/riscv-none-embed-
-# =======
-export CROSS_COMPILE ?=~/.local/xPacks/@gnu-mcu-eclipse/riscv-none-gcc/8.2.0-2.1.1/.content/bin/riscv-none-embed-
-# >>>>>>> Stashed changes
+# xzh cr >>>>>>>
+export CROSS_COMPILE ?=/opt/gnu-mcu-eclipse/riscv-none-gcc/8.2.0-2.1-20190425-1021/bin/riscv-none-embed-
+
+# pyf >>>>>>>
+# export CROSS_COMPILE ?=~/.local/xPacks/@gnu-mcu-eclipse/riscv-none-gcc/8.2.0-2.1.1/.content/bin/riscv-none-embed-
 
 
 export DEFINES := -DHAVE_CCONFIG_H -DHAVE_SIGINFO -DRISCV_LWIP
