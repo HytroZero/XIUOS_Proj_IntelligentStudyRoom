@@ -34,12 +34,13 @@ int main(void)
 #ifdef APPLICATION_WEBSERVER
     webserver();
 #endif
-
-    // WifiInitAndConnect();
     // MqttTest();
     // MonitorSensorTasks();
     // StopSensorTasks();
     // k210_detect("face.json");
+
+    WifiInitAndConnect();
+    MqttTest("192.168.76.149", "1883");
     printf("Creating parallel tasks for all...\n");
     if (CreateAndStartTasks() < 0) {
         printf("Failed to create tasks for all...\n");
@@ -48,5 +49,4 @@ int main(void)
     printf("Parallel tasks created and started\n");
     return 0;
 }
-
 
