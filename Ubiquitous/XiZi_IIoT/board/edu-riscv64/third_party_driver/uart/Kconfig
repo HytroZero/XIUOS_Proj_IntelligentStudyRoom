@@ -19,10 +19,10 @@ menuconfig BSP_USING_UART1
     if BSP_USING_UART1
         config BSP_UART1_TXD_PIN
             int "uart1 TXD pin number"
-            default 19
+            default 7
         config BSP_UART1_RXD_PIN
             int "uart1 RXD pin number"
-            default 18
+            default 6
         config SERIAL_BUS_NAME_1
             string "serial bus 1 name"
             default "uart1"

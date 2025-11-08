@@ -4,14 +4,14 @@ int WifiInitAndConnect(void)
 {
     int ret = 0;
     
-    // 1. ²éÕÒWi-FiÊÊÅäÆ÷
+    // 1. æŸ¥æ‰¾Wi-Fié€‚é…å™¨
     struct Adapter* adapter = AdapterDeviceFindByName(ADAPTER_WIFI_NAME);
     if (!adapter) {
         printf("Wi-Fi adapter not found!\n");
         return -1;
     }
     
-    // 2. ´ò¿ªWi-FiÉè±¸
+    // 2. æ‰“å¼€Wi-Fiè®¾å¤‡
     ret = AdapterDeviceOpen(adapter);
     if (ret != 0) {
         printf("Failed to open Wi-Fi device! Error: %d\n", ret);
@@ -19,24 +19,24 @@ int WifiInitAndConnect(void)
     }
     printf("Wi-Fi device opened successfully.\n");
     
-    // 3. ÅäÖÃWi-FiÁ¬½Ó²ÎÊı£¨Ê¹ÓÃºê¶¨Òå£©
+    // 3. é…ç½®Wi-Fiè¿æ¥å‚æ•°ï¼ˆä½¿ç”¨å®å®šä¹‰ï¼‰
     static struct WifiParam param;
     memset(&param, 0, sizeof(struct WifiParam));
     strncpy((char *)param.wifi_ssid, WIFI_SSID, sizeof(param.wifi_ssid) - 1);
     strncpy((char *)param.wifi_pwd, WIFI_PASSWORD, sizeof(param.wifi_pwd) - 1);
     
-    // È·±£×Ö·û´®ÒÔnull½áÎ²
+    // ç¡®ä¿å­—ç¬¦ä¸²ä»¥nullç»“å°¾
     param.wifi_ssid[sizeof(param.wifi_ssid) - 1] = '\0';
     param.wifi_pwd[sizeof(param.wifi_pwd) - 1] = '\0';
     
     adapter->adapter_param = &param;
     
-    // 4. Ö´ĞĞÁ¬½Ó²Ù×÷
+    // 4. æ‰§è¡Œè¿æ¥æ“ä½œ
     printf("Connecting to Wi-Fi: %s...\n", WIFI_SSID);
     ret = AdapterDeviceSetUp(adapter);
     if (ret != 0) {
         printf("Wi-Fi connection failed! Error: %d\n", ret);
-        // ¹Ø±ÕÉè±¸ÒÔ·À×ÊÔ´Ğ¹Â©
+        // å…³é—­è®¾å¤‡ä»¥é˜²èµ„æºæ³„æ¼
         AdapterDeviceClose(adapter);
         return ret;
     }
@@ -47,8 +47,8 @@ int WifiInitAndConnect(void)
 }
 
 /**
- * @description: ÎÂ¶È´«¸ĞÆ÷ÈÎÎñº¯Êı
- * @param parameter - ÈÎÎñ²ÎÊı
+ * @description: æ¸©åº¦ä¼ æ„Ÿå™¨ä»»åŠ¡å‡½æ•°
+ * @param parameter - ä»»åŠ¡å‚æ•°
  */
 void TemperatureTask(void *parameter)
 {
@@ -56,7 +56,7 @@ void TemperatureTask(void *parameter)
     int32_t temperature;
     int cycle_count = 0;
     struct SensorQuantity* temp = GetTempQuantity();
-    while (temperature_task_run && cycle_count < SENSOR_RUN_CYCLES) {
+    while (temperature_task_run /* && cycle_count < SENSOR_RUN_CYCLES*/) {  // æ­»å¾ªç¯
         printf("\n=== Temperature Measurement Cycle %d ===\n", cycle_count + 1);
         
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
@@ -67,18 +67,18 @@ void TemperatureTask(void *parameter)
             else
                 printf("Temperature : %d.%d C\n", temperature/10, -temperature%10);
         }
-        /* ÈÎÎñÑÓ³Ù5Ãë */
+        /* ä»»åŠ¡å»¶è¿Ÿ5ç§’ */
         UserTaskDelay(3000);
         cycle_count++;
     }
-    SensorQuantityClose(temp);
+    // SensorQuantityClose(temp);
     // printf(" Temperature task completed after %d cycles\n", cycle_count);
-    UserTaskQuit();
+    // UserTaskQuit();
 }
 
 /**
- * @description: Êª¶È´«¸ĞÆ÷ÈÎÎñº¯Êı
- * @param parameter - ÈÎÎñ²ÎÊı
+ * @description: æ¹¿åº¦ä¼ æ„Ÿå™¨ä»»åŠ¡å‡½æ•°
+ * @param parameter - ä»»åŠ¡å‚æ•°
  */
 void HumidityTask(void *parameter)
 {
@@ -87,7 +87,7 @@ void HumidityTask(void *parameter)
     int cycle_count = 0;
     int32_t humidity;
     struct SensorQuantity *humi = GetHumiQuantity();
-    while (humidity_task_run && cycle_count < SENSOR_RUN_CYCLES) {
+    while (humidity_task_run /*  && cycle_count < SENSOR_RUN_CYCLES */ ) { // æ­»å¾ªç¯
         printf("\n=== Humidity Measurement Cycle %d ===\n", cycle_count + 1);
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
             humidity = SensorQuantityReadValue(humi);
@@ -98,23 +98,49 @@ void HumidityTask(void *parameter)
         UserTaskDelay(3000);
         cycle_count++;
     }
-    SensorQuantityClose(humi);
-
+    //SensorQuantityClose(humi);
     // printf(" Humidity task completed after %d cycles\n", cycle_count);
-    UserTaskQuit();
+    // UserTaskQuit(); 
 }
 
 /**
- * @description: ´´½¨²¢Æô¶¯´«¸ĞÆ÷ÈÎÎñ
- * @return ³É¹¦: 0, Ê§°Ü: -1
+ * @description: k210äººè„¸è¯†åˆ«ä»»åŠ¡å‡½æ•°
+ * @param parameter - ä»»åŠ¡å‚æ•°
+ */
+void DetectTask(void *parameter)
+{
+    printf(" K210 detect task started (ID: %d)\n", UserGetTaskID());
+    k210_detect("face.json");
+}
+
+extern volatile int object_exist_or_not;
+/**
+ * @description: ç”¨æ¥æ¥æ”¶k210äººè„¸è¯†åˆ«ä»»åŠ¡å‡½æ•°è¿è¡Œæ—¶äº§ç”Ÿçš„ç»“æœ object_exist_or_not
+ * @param parameter - ä»»åŠ¡å‚æ•°
+ */
+void DetectReceiveTask(void *parameter) {
+    printf(" Receive detect task started (ID: %d)\n", UserGetTaskID());
+    int cycle_count = 0;
+    while (detect_task_run) {
+        printf("\n=== Detect Measurement Cycle %d ===\n", cycle_count + 1);
+        printf("Data: object_exist_or_not: %d\n", object_exist_or_not);
+        UserTaskDelay(3000);
+        cycle_count++;
+    }
+}
+
+
+/**
+ * @description: åˆ›å»ºå¹¶å¯åŠ¨ä¼ æ„Ÿå™¨ä»»åŠ¡
+ * @return æˆåŠŸ: 0, å¤±è´¥: -1
  */
 int CreateAndStartTasks(void)
 {
-    UtaskType temp_task, humi_task, mqtt_task;
+    UtaskType temp_task, humi_task, mqtt_task, detect_task, detect_receive_task;
     
     printf(" Initializing sensor tasks...\n");
     SensorMutexInit();
-    /* ´´½¨ÎÂ¶È´«¸ĞÆ÷ÈÎÎñ */
+    /* åˆ›å»ºæ¸©åº¦ä¼ æ„Ÿå™¨ä»»åŠ¡ */
     strncpy(temp_task.name, "temp_task", NAME_NUM_MAX - 1);
     temp_task.func_entry = (void *)TemperatureTask;
     temp_task.func_param = (void *)&temperature_task_run;
@@ -127,7 +153,7 @@ int CreateAndStartTasks(void)
         return -1;
     }
     
-    /* ´´½¨Êª¶È´«¸ĞÆ÷ÈÎÎñ */
+    /* åˆ›å»ºæ¹¿åº¦ä¼ æ„Ÿå™¨ä»»åŠ¡ */
     strncpy(humi_task.name, "humi_task", NAME_NUM_MAX - 1);
     humi_task.func_entry = (void *)HumidityTask;
     humi_task.func_param = (void *)&humidity_task_run;
@@ -141,12 +167,12 @@ int CreateAndStartTasks(void)
         return -1;
     }
     
-	 /* ´´½¨MQTT±ßÔµÉè±¸ÈÎÎñ */
+	 /* åˆ›å»ºMQTTè¾¹ç¼˜è®¾å¤‡ä»»åŠ¡ */
     strncpy(mqtt_task.name, "mqtt_edge_task", NAME_NUM_MAX - 1);
     mqtt_task.func_entry = (void *)MqttEdgeDeviceTask;
     mqtt_task.func_param = NULL;
-    mqtt_task.stack_size = MQTT_TASK_STACK_SIZE;   // MQTTÈÎÎñĞèÒª½Ï´óÕ»¿Õ¼ä
-    mqtt_task.prio = MQTT_TASK_PRIORITY;           // ÉèÖÃºÏÊÊµÄÓÅÏÈ¼¶
+    mqtt_task.stack_size = MQTT_TASK_STACK_SIZE;   // MQTTä»»åŠ¡éœ€è¦è¾ƒå¤§æ ˆç©ºé—´
+    mqtt_task.prio = MQTT_TASK_PRIORITY;           // è®¾ç½®åˆé€‚çš„ä¼˜å…ˆçº§
     
     mqtt_task_id = UserTaskCreate(mqtt_task);
     if (mqtt_task_id < 0) {
@@ -157,7 +183,39 @@ int CreateAndStartTasks(void)
         printf("MQTT edge device task created successfully, ID: %d\n", mqtt_task_id);
     }
 	
-    // /* Æô¶¯ÈÎÎñ */
+    /* åˆ›å»ºk210äººè„¸è¯†åˆ«ä»»åŠ¡ */
+    strncpy(detect_task.name, "detect_task", NAME_NUM_MAX - 1);
+    detect_task.func_entry = (void *)DetectTask;
+    detect_task.func_param = NULL;
+    detect_task.stack_size = DETECT_TASK_STACK_SIZE;
+    detect_task.prio = DETECT_TASK_PRIORITY;
+    
+    detect_task_id = UserTaskCreate(detect_task);
+    if (detect_task_id < 0) {
+        printf(" Failed to create detect task\n");
+		UserTaskDelete(detect_task_id);
+        return -1;
+    } else {
+        printf("detect task created successfully, ID: %d\n", detect_task_id);
+    }
+	
+    /* åˆ›å»ºæ¥æ”¶Detectä»»åŠ¡ */
+    strncpy(detect_receive_task.name, "detect_receive_task", NAME_NUM_MAX - 1);
+    detect_receive_task.func_entry = (void *)DetectReceiveTask;
+    detect_receive_task.func_param = NULL;
+    detect_receive_task.stack_size = DETECT_RECEIVE_TASK_STACK_SIZE;
+    detect_receive_task.prio = DETECT_RECEIVE_TASK_PRIORITY;
+    
+    detect_receive_task_id = UserTaskCreate(detect_receive_task);
+    if (detect_receive_task_id < 0) {
+        printf(" Failed to create detect_receive task\n");
+		UserTaskDelete(detect_receive_task_id);
+        return -1;
+    } else {
+        printf("detect_receive task created successfully, ID: %d\n", detect_receive_task_id);
+    }
+
+    // /* å¯åŠ¨ä»»åŠ¡ */
     // if (UserTaskStartup(temperature_task_id) != EOK) {
     //     printf(" Failed to start temperature task\n");
 	// 	UserTaskDelete(temperature_task_id);
@@ -171,23 +229,40 @@ int CreateAndStartTasks(void)
     //     return -1;
     // }
 
-	UserTaskDelay(100);
-    if (UserTaskStartup(mqtt_task_id) != EOK) {
-        printf(" Failed to start mqtt task\n");
-        UserTaskDelete(mqtt_task_id);
+	// UserTaskDelay(100);
+    // if (UserTaskStartup(mqtt_task_id) != EOK) {
+    //     printf(" Failed to start mqtt task\n");
+    //     UserTaskDelete(mqtt_task_id);
+    //     return -1;
+    // }
+
+
+    UserTaskDelay(100);
+    if (UserTaskStartup(detect_task_id) != EOK) {
+        printf(" Failed to start detect task\n");
+        UserTaskDelete(detect_task_id);
         return -1;
     }
-    
+
+    UserTaskDelay(100);
+    if (UserTaskStartup(detect_receive_task_id) != EOK) {
+        printf(" Failed to start detect_receive task\n");
+        UserTaskDelete(detect_receive_task_id);
+        return -1;
+    }
+
     printf(" tasks created successfully:\n");
     printf("   - Temperature Task: ID=%d, Priority=%d\n", temperature_task_id, TEMPERATURE_TASK_PRIORITY);
     printf("   - Humidity Task: ID=%d, Priority=%d\n", humidity_task_id, HUMIDITY_TASK_PRIORITY);
 	printf("   - MQTT Task: ID=%d, Priority=%d\n", mqtt_task_id, MQTT_TASK_PRIORITY);
+    printf("   - Detect Task: ID=%d, Priority=%d\n", detect_task_id, DETECT_TASK_PRIORITY);
+    printf("   - Detect_Receive Task: ID=%d, Priority=%d\n", detect_receive_task_id, DETECT_RECEIVE_TASK_PRIORITY);
     
     return 0;
 }
 
 /**
- * @description: Í£Ö¹´«¸ĞÆ÷ÈÎÎñ
+ * @description: åœæ­¢ä¼ æ„Ÿå™¨ä»»åŠ¡
  */
 void StopSensorTasks(void)
 {
@@ -197,10 +272,10 @@ void StopSensorTasks(void)
     humidity_task_run = 0;
 	mqtt_task_run = 0;
     
-    /* ¸øÈÎÎñÒ»Ğ©Ê±¼äÕı³£ÍË³ö */
+    /* ç»™ä»»åŠ¡ä¸€äº›æ—¶é—´æ­£å¸¸é€€å‡º */
     UserTaskDelay(200);
     
-    /* Ç¿ÖÆÉ¾³ıÈÎÎñ */
+    /* å¼ºåˆ¶åˆ é™¤ä»»åŠ¡ */
     if (temperature_task_id >= 0) {
         UserTaskDelete(temperature_task_id);
         temperature_task_id = -1;
@@ -219,7 +294,7 @@ void StopSensorTasks(void)
 }
 
 /**
- * @description: ¼à¿ØÈÎÎñ×´Ì¬
+ * @description: ç›‘æ§ä»»åŠ¡çŠ¶æ€
  */
 void MonitorSensorTasks(void)
 {
@@ -242,7 +317,7 @@ void MonitorSensorTasks(void)
         printf("Humidity Task: ID=%d, Name=%s, State=%d\n", 
                humidity_task_id, humi_name, humi_stat);
         
-        UserTaskDelay(5000);  /* Ã¿5Ãë¼à¿ØÒ»´Î */
+        UserTaskDelay(5000);  /* æ¯5ç§’ç›‘æ§ä¸€æ¬¡ */
         monitor_count++;
     }
 }
@@ -256,21 +331,21 @@ void MqttEdgeDeviceTask()
     DeviceState previous_state = STATE_NO_PERSON;
     LightControl light_ctrl = {0};
 
-    // ²éÕÒ²¢³õÊ¼»¯WiFiÊÊÅäÆ÷
+    // æŸ¥æ‰¾å¹¶åˆå§‹åŒ–WiFié€‚é…å™¨
     g_mqtt_adapter = AdapterDeviceFindByName(ADAPTER_WIFI_NAME);
     if (!g_mqtt_adapter) {
         lw_print("Failed to find WiFi adapter\n");
         return;
     }
 
-    // ÉèÖÃMQTTÁ¬½Ó²ÎÊı
+    // è®¾ç½®MQTTè¿æ¥å‚æ•°
     const char *client_id = "edge_device_001";
-    const char *username = NULL;  // ¸ù¾İÊµ¼ÊÇé¿öÉèÖÃ
-    const char *password = NULL;  // ¸ù¾İÊµ¼ÊÇé¿öÉèÖÃ
+    const char *username = NULL;  // æ ¹æ®å®é™…æƒ…å†µè®¾ç½®
+    const char *password = NULL;  // æ ¹æ®å®é™…æƒ…å†µè®¾ç½®
 
-    // MQTTÁ¬½ÓÑ­»·
+    // MQTTè¿æ¥å¾ªç¯
 MQTT_CONNECT:
-    // Ê¹ÓÃÊÊÅäÆ÷APIÁ¬½ÓMQTT·şÎñÆ÷
+    // ä½¿ç”¨é€‚é…å™¨APIè¿æ¥MQTTæœåŠ¡å™¨
     ret = AdapterDeviceMqttConnect(g_mqtt_adapter, mqtt_ip_str_iot, 
                                  mqtt_socket_port_iot, client_id, 
                                  username, password);
@@ -282,38 +357,38 @@ MQTT_CONNECT:
 
     lw_print("MQTT connect %s:%s success\n", mqtt_ip_str_iot, mqtt_socket_port_iot);
 
-    // ¶©ÔÄÖ÷Ìâ
+    // è®¢é˜…ä¸»é¢˜
     const char *subscribe_topic = "iot/devices/#";
-    // ×¢Òâ£º¶©ÔÄ¹¦ÄÜ¿ÉÄÜĞèÒªÍ¨¹ıÆäËûAPIÊµÏÖ£¬ÕâÀï¼ÙÉèÊÊÅäÆ÷Ö§³Ö
+    // æ³¨æ„ï¼šè®¢é˜…åŠŸèƒ½å¯èƒ½éœ€è¦é€šè¿‡å…¶ä»–APIå®ç°ï¼Œè¿™é‡Œå‡è®¾é€‚é…å™¨æ”¯æŒ
     
     lw_print("Subscribe %s success\n", subscribe_topic);
 
-    // Ö÷Ñ­»·
+    // ä¸»å¾ªç¯
     uint32_t tick_count = 0;
     uint8_t no_mqtt_msg_exchange = 1;
     
-    // ½ÓÊÕ»º³åÇø
+    // æ¥æ”¶ç¼“å†²åŒº
     uint8_t recv_buf[512];
     char recv_topic[128];
 
     while(1) {
         tick_count++;
         
-        // ´¦ÀíMQTTÏûÏ¢½ÓÊÕ£¨·Ç×èÈû£©
+        // å¤„ç†MQTTæ¶ˆæ¯æ¥æ”¶ï¼ˆéé˜»å¡ï¼‰
         ssize_t recv_len = AdapterDeviceMqttRecv(g_mqtt_adapter, subscribe_topic, recv_buf, sizeof(recv_buf));
         if (recv_len > 0) {
-            // ´¦Àí½ÓÊÕµ½µÄÏûÏ¢
+            // å¤„ç†æ¥æ”¶åˆ°çš„æ¶ˆæ¯
             lw_print("Received MQTT message, len: %d\n", recv_len);
             ProcessMqttMessage(recv_buf, recv_len);
             no_mqtt_msg_exchange = 0;
         }
 
-        // Ã¿5Ãë´¦ÀíÒ»´Î´«¸ĞÆ÷Êı¾İ²¢·¢²¼×´Ì¬
+        // æ¯5ç§’å¤„ç†ä¸€æ¬¡ä¼ æ„Ÿå™¨æ•°æ®å¹¶å‘å¸ƒçŠ¶æ€
         if(tick_count % 500 == 0) {
-            // ´ÓÄÚ²¿ÏûÏ¢¶ÓÁĞ»ñÈ¡´«¸ĞÆ÷Êı¾İ
+            // ä»å†…éƒ¨æ¶ˆæ¯é˜Ÿåˆ—è·å–ä¼ æ„Ÿå™¨æ•°æ®
             SensorData sensor_data = GetSensorDataFromQueue();
             
-            // ×´Ì¬»úÂß¼­
+            // çŠ¶æ€æœºé€»è¾‘
             previous_state = current_state;
             
             if (!sensor_data.person_present) {
@@ -332,20 +407,20 @@ MQTT_CONNECT:
                 current_state = STATE_NORMAL;
             }
             
-            // ¸ù¾İ×´Ì¬Éú³ÉµÆ¹â¿ØÖÆÃüÁî
+            // æ ¹æ®çŠ¶æ€ç”Ÿæˆç¯å…‰æ§åˆ¶å‘½ä»¤
             GenerateLightControl(current_state, &light_ctrl);
             
-            // ·¢²¼Éè±¸×´Ì¬ÏûÏ¢
+            // å‘å¸ƒè®¾å¤‡çŠ¶æ€æ¶ˆæ¯
             PublishDeviceStatusUsingAdapter(sensor_data, current_state, light_ctrl);
             
             no_mqtt_msg_exchange = 0;
         }
 
-        // Ã¿30Ãë¼ì²éÁ¬½Ó×´Ì¬£¨Èç¹ûÃ»ÓĞÊı¾İ½»»»£©
+        // æ¯30ç§’æ£€æŸ¥è¿æ¥çŠ¶æ€ï¼ˆå¦‚æœæ²¡æœ‰æ•°æ®äº¤æ¢ï¼‰
         if(tick_count % 3000 == 0) {
             if(no_mqtt_msg_exchange) {
-                // ³¢ÊÔ·¢ËÍĞÄÌø»ò¼ì²éÁ¬½Ó×´Ì¬
-                // ÕâÀï¿ÉÒÔ·¢ËÍÒ»¸ö¿ÕÏûÏ¢»òÊ¹ÓÃÊÊÅäÆ÷µÄĞÄÌø¹¦ÄÜ
+                // å°è¯•å‘é€å¿ƒè·³æˆ–æ£€æŸ¥è¿æ¥çŠ¶æ€
+                // è¿™é‡Œå¯ä»¥å‘é€ä¸€ä¸ªç©ºæ¶ˆæ¯æˆ–ä½¿ç”¨é€‚é…å™¨çš„å¿ƒè·³åŠŸèƒ½
                 if (!CheckMqttConnection()) {
                     lw_print("Connection lost, reconnecting...\n");
                     AdapterDeviceMqttDisconnect(g_mqtt_adapter);
@@ -357,29 +432,29 @@ MQTT_CONNECT:
             no_mqtt_msg_exchange = 1;
         }
 
-        PrivTaskDelay(10); // 10msÑÓ³Ù
+        PrivTaskDelay(10); // 10mså»¶è¿Ÿ
     }
 
-    // ÇåÀí×ÊÔ´
+    // æ¸…ç†èµ„æº
     AdapterDeviceMqttDisconnect(g_mqtt_adapter);
 }
 
-// ´¦Àí½ÓÊÕµ½µÄMQTTÏûÏ¢
+// å¤„ç†æ¥æ”¶åˆ°çš„MQTTæ¶ˆæ¯
 void ProcessMqttMessage(uint8_t *data, size_t len)
 {
-    // ¼òµ¥µÄÏûÏ¢´¦ÀíÊ¾Àı
+    // ç®€å•çš„æ¶ˆæ¯å¤„ç†ç¤ºä¾‹
     if (len > 0) {
         lw_print("MQTT message: %.*s\n", len, data);
         
-        // ÕâÀï¿ÉÒÔÌí¼Ó¾ßÌåµÄÏûÏ¢½âÎöºÍ´¦ÀíÂß¼­
-        // ÀıÈç£º½âÎö¿ØÖÆÃüÁî¡¢ÅäÖÃ¸üĞÂµÈ
+        // è¿™é‡Œå¯ä»¥æ·»åŠ å…·ä½“çš„æ¶ˆæ¯è§£æå’Œå¤„ç†é€»è¾‘
+        // ä¾‹å¦‚ï¼šè§£ææ§åˆ¶å‘½ä»¤ã€é…ç½®æ›´æ–°ç­‰
     }
 }
 
-// ¼ì²éMQTTÁ¬½Ó×´Ì¬
+// æ£€æŸ¥MQTTè¿æ¥çŠ¶æ€
 int CheckMqttConnection(void)
 {
-    // ³¢ÊÔ·¢ËÍÒ»¸öĞ¡µÄ²âÊÔÏûÏ¢À´¼ì²éÁ¬½Ó
+    // å°è¯•å‘é€ä¸€ä¸ªå°çš„æµ‹è¯•æ¶ˆæ¯æ¥æ£€æŸ¥è¿æ¥
     const char *test_topic = "iot/devices/ping";
     const char *test_payload = "ping";
     
@@ -388,8 +463,8 @@ int CheckMqttConnection(void)
 }
 
 /**
- * @brief ´ÓÄÚ²¿ÏûÏ¢¶ÓÁĞ»ñÈ¡´«¸ĞÆ÷Êı¾İ
- * @return ´«¸ĞÆ÷Êı¾İ½á¹¹
+ * @brief ä»å†…éƒ¨æ¶ˆæ¯é˜Ÿåˆ—è·å–ä¼ æ„Ÿå™¨æ•°æ®
+ * @return ä¼ æ„Ÿå™¨æ•°æ®ç»“æ„
  */
 SensorData GetSensorDataFromQueue(void)
 {
@@ -398,59 +473,59 @@ SensorData GetSensorDataFromQueue(void)
     
     SensorData data = {0};
     
-    // 6ÖÖ³¡¾°Ñ­»·£¬¶ÔÓ¦6ÖÖ×´Ì¬
+    // 6ç§åœºæ™¯å¾ªç¯ï¼Œå¯¹åº”6ç§çŠ¶æ€
     scenario_index = call_count % 6;
     
     switch (scenario_index) {
-        case 0: // STATE_NO_PERSON - ÎŞÈË×´Ì¬
+        case 0: // STATE_NO_PERSON - æ— äººçŠ¶æ€
             data.person_present = 0;
-            data.light_intensity = 40.0f;  // ÖĞµÈ¹âÕÕ
+            data.light_intensity = 40.0f;  // ä¸­ç­‰å…‰ç…§
             data.temperature = 26.0f;
             data.humidity = 55.0f;
             break;
             
-        case 1: // STATE_PERSON_ENTER - ÈËÔ±½øÈë
+        case 1: // STATE_PERSON_ENTER - äººå‘˜è¿›å…¥
             data.person_present = 1;
-            data.light_intensity = 45.0f;  // ÖĞµÈ¹âÕÕ
+            data.light_intensity = 45.0f;  // ä¸­ç­‰å…‰ç…§
             data.temperature = 26.5f;
             data.humidity = 56.0f;
             break;
             
-        case 2: // STATE_PERSON_DARK - ÓĞÈË+°µ¹â
+        case 2: // STATE_PERSON_DARK - æœ‰äºº+æš—å…‰
             data.person_present = 1;
-            data.light_intensity = 15.0f;  // °µ¹â»·¾³
+            data.light_intensity = 15.0f;  // æš—å…‰ç¯å¢ƒ
             data.temperature = 25.5f;
             data.humidity = 58.0f;
             break;
             
-        case 3: // STATE_PERSON_BRIGHT - ÓĞÈË+Ã÷¹â
+        case 3: // STATE_PERSON_BRIGHT - æœ‰äºº+æ˜å…‰
             data.person_present = 1;
-            data.light_intensity = 85.0f;  // Ã÷ÁÁ»·¾³
+            data.light_intensity = 85.0f;  // æ˜äº®ç¯å¢ƒ
             data.temperature = 27.0f;
             data.humidity = 52.0f;
             break;
             
-        case 4: // STATE_HIGH_HUMIDITY - ¸ßÊª¶È
+        case 4: // STATE_HIGH_HUMIDITY - é«˜æ¹¿åº¦
             data.person_present = 1;
             data.light_intensity = 50.0f;
             data.temperature = 28.0f;
-            data.humidity = 88.0f;  // ¸ßÊª¶È
+            data.humidity = 88.0f;  // é«˜æ¹¿åº¦
             break;
             
-        case 5: // STATE_HIGH_TEMPERATURE - ¸ßÎÂ
+        case 5: // STATE_HIGH_TEMPERATURE - é«˜æ¸©
             data.person_present = 1;
             data.light_intensity = 55.0f;
-            data.temperature = 35.0f;  // ¸ßÎÂ
+            data.temperature = 35.0f;  // é«˜æ¸©
             data.humidity = 60.0f;
             break;
     }
     
-    // Ìí¼ÓĞ¡·¶Î§Ëæ»ú²¨¶¯£¬Ê¹Êı¾İ¸üÕæÊµ
+    // æ·»åŠ å°èŒƒå›´éšæœºæ³¢åŠ¨ï¼Œä½¿æ•°æ®æ›´çœŸå®
     data.light_intensity += (rand() % 10) * 0.5f - 2.5f;
     data.temperature += (rand() % 10) * 0.1f - 0.5f;
     data.humidity += (rand() % 10) * 0.2f - 1.0f;
     
-    // È·±£Êı¾İÔÚºÏÀí·¶Î§ÄÚ
+    // ç¡®ä¿æ•°æ®åœ¨åˆç†èŒƒå›´å†…
     if (data.light_intensity < 0) data.light_intensity = 0;
     if (data.light_intensity > 100) data.light_intensity = 100;
     if (data.temperature < -10) data.temperature = -10;
@@ -460,88 +535,88 @@ SensorData GetSensorDataFromQueue(void)
     
     call_count++;
     
-    // ´òÓ¡Ä£ÄâÊı¾İÓÃÓÚµ÷ÊÔ
-    lw_print("Sensor Data[³¡¾°%d]: ÈËÔ±=%d, ¹âÕÕ=%.1f, ÎÂ¶È=%.1f¡ãC, Êª¶È=%.1f%%\n",
+    // æ‰“å°æ¨¡æ‹Ÿæ•°æ®ç”¨äºè°ƒè¯•
+    lw_print("Sensor Data[åœºæ™¯%d]: äººå‘˜=%d, å…‰ç…§=%.1f, æ¸©åº¦=%.1fÂ°C, æ¹¿åº¦=%.1f%%\n",
              scenario_index, data.person_present, data.light_intensity, 
              data.temperature, data.humidity);
     
     return data;
     // SensorData data = {0};
     
-    // // ÕâÀïÄ£Äâ´ÓÏûÏ¢¶ÓÁĞ»ñÈ¡Êı¾İ
-    // // Êµ¼ÊÓ¦ÓÃÖĞÓ¦¸Ã´ÓÕæÕıµÄÏûÏ¢¶ÓÁĞ¶ÁÈ¡
-    // data.person_present = CheckPersonPresence();    // ¼ì²éÊÇ·ñÓĞÈË
-    // data.light_intensity = GetLightIntensity();     // »ñÈ¡¹âÕÕÇ¿¶È
-    // data.temperature = GetTemperature();            // »ñÈ¡ÎÂ¶È
-    // data.humidity = GetHumidity();                  // »ñÈ¡Êª¶È
+    // // è¿™é‡Œæ¨¡æ‹Ÿä»æ¶ˆæ¯é˜Ÿåˆ—è·å–æ•°æ®
+    // // å®é™…åº”ç”¨ä¸­åº”è¯¥ä»çœŸæ­£çš„æ¶ˆæ¯é˜Ÿåˆ—è¯»å–
+    // data.person_present = CheckPersonPresence();    // æ£€æŸ¥æ˜¯å¦æœ‰äºº
+    // data.light_intensity = GetLightIntensity();     // è·å–å…‰ç…§å¼ºåº¦
+    // data.temperature = GetTemperature();            // è·å–æ¸©åº¦
+    // data.humidity = GetHumidity();                  // è·å–æ¹¿åº¦
     
     // return data;
 }
 
 /**
- * @brief ¸ù¾İÉè±¸×´Ì¬Éú³ÉµÆ¹â¿ØÖÆÃüÁî
- * @param state µ±Ç°Éè±¸×´Ì¬
- * @param ctrl µÆ¹â¿ØÖÆ½á¹¹ÌåÖ¸Õë
+ * @brief æ ¹æ®è®¾å¤‡çŠ¶æ€ç”Ÿæˆç¯å…‰æ§åˆ¶å‘½ä»¤
+ * @param state å½“å‰è®¾å¤‡çŠ¶æ€
+ * @param ctrl ç¯å…‰æ§åˆ¶ç»“æ„ä½“æŒ‡é’ˆ
  */
 void GenerateLightControl(DeviceState state, LightControl *ctrl)
 {
     switch(state) {
         case STATE_NO_PERSON:
-            ctrl->power = 0;       // ¹ØµÆ
+            ctrl->power = 0;       // å…³ç¯
             ctrl->brightness = 0;
             ctrl->color_temp = 0;
             break;
             
         case STATE_PERSON_ENTER:
-            ctrl->power = 1;       // ¿ªµÆ£¬ÖĞµÈÁÁ¶È£¬ÖĞĞÔÉ«ÎÂ
+            ctrl->power = 1;       // å¼€ç¯ï¼Œä¸­ç­‰äº®åº¦ï¼Œä¸­æ€§è‰²æ¸©
             ctrl->brightness = 60;
             ctrl->color_temp = 1;
             break;
             
         case STATE_PERSON_DARK:
-            ctrl->power = 1;       // ¿ªµÆ£¬¸ßÁÁ¶È£¬Å¯É«µ÷
+            ctrl->power = 1;       // å¼€ç¯ï¼Œé«˜äº®åº¦ï¼Œæš–è‰²è°ƒ
             ctrl->brightness = 90;
             ctrl->color_temp = 2;
             break;
             
         case STATE_PERSON_BRIGHT:
-            ctrl->power = 1;       // ¿ªµÆ£¬µÍÁÁ¶È£¬ÀäÉ«µ÷
+            ctrl->power = 1;       // å¼€ç¯ï¼Œä½äº®åº¦ï¼Œå†·è‰²è°ƒ
             ctrl->brightness = 30;
             ctrl->color_temp = 0;
             break;
             
         case STATE_HIGH_HUMIDITY:
         case STATE_HIGH_TEMPERATURE:
-            ctrl->power = 1;       // ¿ªµÆ£¬ÖĞµÈÁÁ¶È£¬ÀäÉ«µ÷£¨¸øÈËÁ¹Ë¬¸Ğ£©
+            ctrl->power = 1;       // å¼€ç¯ï¼Œä¸­ç­‰äº®åº¦ï¼Œå†·è‰²è°ƒï¼ˆç»™äººå‡‰çˆ½æ„Ÿï¼‰
             ctrl->brightness = 70;
             ctrl->color_temp = 0;
             break;
             
         case STATE_NORMAL:
-            ctrl->power = 1;       // ¿ªµÆ£¬ÊæÊÊÁÁ¶È£¬ÖĞĞÔÉ«ÎÂ
+            ctrl->power = 1;       // å¼€ç¯ï¼Œèˆ’é€‚äº®åº¦ï¼Œä¸­æ€§è‰²æ¸©
             ctrl->brightness = 50;
             ctrl->color_temp = 1;
             break;
     }
-    ctrl->color_mode = 0; // ×Ô¶¯Ä£Ê½
+    ctrl->color_mode = 0; // è‡ªåŠ¨æ¨¡å¼
 }
 
 /**
- * @brief ·¢²¼Éè±¸×´Ì¬µ½MQTT
- * @param fd socketÃèÊö·û
- * @param sensor_data ´«¸ĞÆ÷Êı¾İ
- * @param state Éè±¸×´Ì¬
- * @param light_ctrl µÆ¹â¿ØÖÆÃüÁî
+ * @brief å‘å¸ƒè®¾å¤‡çŠ¶æ€åˆ°MQTT
+ * @param fd socketæè¿°ç¬¦
+ * @param sensor_data ä¼ æ„Ÿå™¨æ•°æ®
+ * @param state è®¾å¤‡çŠ¶æ€
+ * @param light_ctrl ç¯å…‰æ§åˆ¶å‘½ä»¤
  */
-// Ê¹ÓÃÊÊÅäÆ÷API·¢²¼Éè±¸×´Ì¬
+// ä½¿ç”¨é€‚é…å™¨APIå‘å¸ƒè®¾å¤‡çŠ¶æ€
 void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, LightControl light_ctrl)
 {
     cJSON *root = cJSON_CreateObject();
     
-    // Ìí¼ÓÉè±¸ĞÅÏ¢
+    // æ·»åŠ è®¾å¤‡ä¿¡æ¯
     cJSON_AddStringToObject(root, "device_id", "edge_device_001");
     
-    // Ìí¼Ó´«¸ĞÆ÷Êı¾İ
+    // æ·»åŠ ä¼ æ„Ÿå™¨æ•°æ®
     cJSON *sensors = cJSON_CreateObject();
     cJSON_AddBoolToObject(sensors, "person_present", sensor_data.person_present);
     cJSON_AddNumberToObject(sensors, "light_intensity", sensor_data.light_intensity);
@@ -549,14 +624,14 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
     cJSON_AddNumberToObject(sensors, "humidity", sensor_data.humidity);
     cJSON_AddItemToObject(root, "sensor_data", sensors);
     
-    // Ìí¼ÓÉè±¸×´Ì¬
+    // æ·»åŠ è®¾å¤‡çŠ¶æ€
     const char *state_str[] = {
         "no_person", "person_enter", "person_dark", "person_bright",
         "high_humidity", "high_temperature", "normal"
     };
     cJSON_AddStringToObject(root, "device_state", state_str[state]);
     
-    // Ìí¼Ó¿ØÖÆÃüÁî
+    // æ·»åŠ æ§åˆ¶å‘½ä»¤
     cJSON *control = cJSON_CreateObject();
     cJSON_AddBoolToObject(control, "power", light_ctrl.power);
     cJSON_AddNumberToObject(control, "brightness", light_ctrl.brightness);
@@ -566,11 +641,11 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
     
 
     
-    // Éú³ÉJSON×Ö·û´®
+    // ç”ŸæˆJSONå­—ç¬¦ä¸²
     char *json_str = cJSON_PrintUnformatted(root);
     lw_print("Publishing: %s\n", json_str);
     
-    // Ê¹ÓÃÊÊÅäÆ÷API·¢²¼ÏûÏ¢
+    // ä½¿ç”¨é€‚é…å™¨APIå‘å¸ƒæ¶ˆæ¯
     const char *publish_topic = "iot/devices/status";
     ssize_t send_len = AdapterDeviceMqttSend(g_mqtt_adapter, publish_topic, json_str, strlen(json_str));
     
@@ -580,7 +655,7 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
         lw_print("Publish success, len: %d\n", send_len);
     }
     
-    // ÇåÀí×ÊÔ´
+    // æ¸…ç†èµ„æº
     cJSON_free(json_str);
     cJSON_Delete(root);
 }
@@ -591,131 +666,131 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
 
 
 /**
- * ¼ì²âÈËÔ±´æÔÚ
- * ·µ»Ø: 1-ÓĞÈË, 0-ÎŞÈË
+ * æ£€æµ‹äººå‘˜å­˜åœ¨
+ * è¿”å›: 1-æœ‰äºº, 0-æ— äºº
  */
 uint8_t CheckPersonPresence(void)
 {
-    // ¼òµ¥ÊµÏÖ£ºÄ£ÄâËæ»úµÄÈËÔ±¼ì²â
-    // ÔÚÊµ¼ÊÓ¦ÓÃÖĞ£¬ÕâÀïÓ¦¸Ã¶ÁÈ¡ºìÍâ´«¸ĞÆ÷»òÉãÏñÍ·Êı¾İ
+    // ç®€å•å®ç°ï¼šæ¨¡æ‹Ÿéšæœºçš„äººå‘˜æ£€æµ‹
+    // åœ¨å®é™…åº”ç”¨ä¸­ï¼Œè¿™é‡Œåº”è¯¥è¯»å–çº¢å¤–ä¼ æ„Ÿå™¨æˆ–æ‘„åƒå¤´æ•°æ®
     static unsigned int call_count = 0;
     call_count++;
     
-    // Ã¿5´Îµ÷ÓÃÖĞÓĞ1´Î¼ì²âµ½ÈËÔ±£¨Ä£ÄâËæ»ú¼ì²â£©
+    // æ¯5æ¬¡è°ƒç”¨ä¸­æœ‰1æ¬¡æ£€æµ‹åˆ°äººå‘˜ï¼ˆæ¨¡æ‹Ÿéšæœºæ£€æµ‹ï¼‰
     return (call_count % 5 == 0) ? 1 : 0;
 }
 
 /**
- * »ñÈ¡¹âÕÕÇ¿¶È
- * ·µ»Ø: ¹âÕÕÇ¿¶ÈÖµ (lux)
+ * è·å–å…‰ç…§å¼ºåº¦
+ * è¿”å›: å…‰ç…§å¼ºåº¦å€¼ (lux)
  */
 float GetLightIntensity(void)
 {
-    // ¼òµ¥ÊµÏÖ£ºÄ£Äâ¹âÕÕÇ¿¶È¶ÁÊı
-    // ÔÚÊµ¼ÊÓ¦ÓÃÖĞ£¬ÕâÀïÓ¦¸Ã¶ÁÈ¡¹âÕÕ´«¸ĞÆ÷Êı¾İ
+    // ç®€å•å®ç°ï¼šæ¨¡æ‹Ÿå…‰ç…§å¼ºåº¦è¯»æ•°
+    // åœ¨å®é™…åº”ç”¨ä¸­ï¼Œè¿™é‡Œåº”è¯¥è¯»å–å…‰ç…§ä¼ æ„Ÿå™¨æ•°æ®
     static unsigned int call_count = 0;
     call_count++;
     
-    // Ä£Äâ¹âÕÕÇ¿¶ÈÔÚ100-1000 luxÖ®¼ä±ä»¯
+    // æ¨¡æ‹Ÿå…‰ç…§å¼ºåº¦åœ¨100-1000 luxä¹‹é—´å˜åŒ–
     float base_light = 300.0f;
-    float variation = (float)(call_count % 200); // 0-199µÄ±ä»¯
+    float variation = (float)(call_count % 200); // 0-199çš„å˜åŒ–
     return base_light + variation;
 }
 
 /**
- * »ñÈ¡ÎÂ¶ÈÖµ
- * ·µ»Ø: ÎÂ¶ÈÖµ (¡ãC)
+ * è·å–æ¸©åº¦å€¼
+ * è¿”å›: æ¸©åº¦å€¼ (Â°C)
  */
 float GetTemperature(void)
 {
-    // ¼òµ¥ÊµÏÖ£ºÄ£ÄâÎÂ¶È¶ÁÊı
-    // ÔÚÊµ¼ÊÓ¦ÓÃÖĞ£¬ÕâÀïÓ¦¸Ã¶ÁÈ¡ÎÂ¶È´«¸ĞÆ÷Êı¾İ
+    // ç®€å•å®ç°ï¼šæ¨¡æ‹Ÿæ¸©åº¦è¯»æ•°
+    // åœ¨å®é™…åº”ç”¨ä¸­ï¼Œè¿™é‡Œåº”è¯¥è¯»å–æ¸©åº¦ä¼ æ„Ÿå™¨æ•°æ®
     static unsigned int call_count = 0;
     call_count++;
     
-    // Ä£ÄâÎÂ¶ÈÔÚ20.0-30.0¡ãCÖ®¼ä»ºÂı±ä»¯
+    // æ¨¡æ‹Ÿæ¸©åº¦åœ¨20.0-30.0Â°Cä¹‹é—´ç¼“æ…¢å˜åŒ–
     float base_temp = 25.0f;
-    float variation = (float)(call_count % 100) / 10.0f; // 0.0-9.9µÄ±ä»¯
-    return base_temp + (variation - 4.95f); // ÔÚ20.05-29.95Ö®¼ä
+    float variation = (float)(call_count % 100) / 10.0f; // 0.0-9.9çš„å˜åŒ–
+    return base_temp + (variation - 4.95f); // åœ¨20.05-29.95ä¹‹é—´
 }
 
 /**
- * »ñÈ¡Êª¶ÈÖµ
- * ·µ»Ø: Êª¶ÈÖµ (%RH)
+ * è·å–æ¹¿åº¦å€¼
+ * è¿”å›: æ¹¿åº¦å€¼ (%RH)
  */
 float GetHumidity(void)
 {
-    // ¼òµ¥ÊµÏÖ£ºÄ£ÄâÊª¶È¶ÁÊı
-    // ÔÚÊµ¼ÊÓ¦ÓÃÖĞ£¬ÕâÀïÓ¦¸Ã¶ÁÈ¡Êª¶È´«¸ĞÆ÷Êı¾İ
+    // ç®€å•å®ç°ï¼šæ¨¡æ‹Ÿæ¹¿åº¦è¯»æ•°
+    // åœ¨å®é™…åº”ç”¨ä¸­ï¼Œè¿™é‡Œåº”è¯¥è¯»å–æ¹¿åº¦ä¼ æ„Ÿå™¨æ•°æ®
     static unsigned int call_count = 0;
     call_count++;
     
-    // Ä£ÄâÊª¶ÈÔÚ40%-80%Ö®¼ä±ä»¯
+    // æ¨¡æ‹Ÿæ¹¿åº¦åœ¨40%-80%ä¹‹é—´å˜åŒ–
     float base_humidity = 60.0f;
-    float variation = (float)(call_count % 40); // 0-39µÄ±ä»¯
-    return base_humidity + (variation - 19.5f); // ÔÚ40.5-79.5Ö®¼ä
+    float variation = (float)(call_count % 40); // 0-39çš„å˜åŒ–
+    return base_humidity + (variation - 19.5f); // åœ¨40.5-79.5ä¹‹é—´
 }
 
 int MqttTest()
 {
     struct Adapter* adapter = AdapterDeviceFindByName(ADAPTER_WIFI_NAME);
     if (!adapter) {
-        printf("ÕÒ²»µ½WiFiÊÊÅäÆ÷\n");
+        printf("æ‰¾ä¸åˆ°WiFié€‚é…å™¨\n");
         return -1;
     }
 
-    // 1. Ê¹ÓÃÊÊÅäÆ÷APIÁ¬½ÓMQTT·şÎñÆ÷
+    // 1. ä½¿ç”¨é€‚é…å™¨APIè¿æ¥MQTTæœåŠ¡å™¨
     const char *ip = "192.168.76.149";
     const char *port = "1883";
     enum NetRoleType net_role = CLIENT;
     enum IpType ip_type = IPV4;
     adapter->socket.protocal = SOCKET_PROTOCOL_TCP;
-    printf("Á¬½ÓMQTT·şÎñÆ÷: %s:%s\n", ip, port);
+    printf("è¿æ¥MQTTæœåŠ¡å™¨: %s:%s\n", ip, port);
     
     int ret = AdapterDeviceConnect(adapter, net_role, ip, port, ip_type);
     if (ret < 0) {
-        printf("Á¬½ÓMQTT·şÎñÆ÷Ê§°Ü: %d\n", ret);
+        printf("è¿æ¥MQTTæœåŠ¡å™¨å¤±è´¥: %d\n", ret);
         return -1;
     }
-    printf("Á¬½Óµ½MQTT·şÎñÆ÷³É¹¦\n");
- 	printf("×é×°MQTTÁ¬½Ó²ÎÊı...\n");
+    printf("è¿æ¥åˆ°MQTTæœåŠ¡å™¨æˆåŠŸ\n");
+ 	printf("ç»„è£…MQTTè¿æ¥å‚æ•°...\n");
     
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
     uint8_t buf[200];
     int buflen = sizeof(buf);
     int len = 0;
     
-    data.clientID.cstring = "test_client_001";      // ¿Í»§¶ËID
-    data.keepAliveInterval = 60;                   // ±£³Ö»îÔ¾60Ãë
-    data.username.cstring = NULL;                  // ÓÃ»§Ãû£¨¿ÉÑ¡£©
-    data.password.cstring = NULL;                  // ÃÜÂë£¨¿ÉÑ¡£©
+    data.clientID.cstring = "test_client_001";      // å®¢æˆ·ç«¯ID
+    data.keepAliveInterval = 60;                   // ä¿æŒæ´»è·ƒ60ç§’
+    data.username.cstring = NULL;                  // ç”¨æˆ·åï¼ˆå¯é€‰ï¼‰
+    data.password.cstring = NULL;                  // å¯†ç ï¼ˆå¯é€‰ï¼‰
     data.MQTTVersion = 4;                          // MQTT 3.1.1
-    data.cleansession = 1;                         // ÇåÀí»á»°
+    data.cleansession = 1;                         // æ¸…ç†ä¼šè¯
     
     len = MQTTSerialize_connect(buf, buflen, &data);
     if (len <= 0) {
-        printf(" MQTTÁ¬½Ó°üĞòÁĞ»¯Ê§°Ü\n");
+        printf(" MQTTè¿æ¥åŒ…åºåˆ—åŒ–å¤±è´¥\n");
         return -1;
     }
-    printf(" MQTTÁ¬½Ó°üĞòÁĞ»¯³É¹¦£¬³¤¶È: %d×Ö½Ú\n", len);
+    printf(" MQTTè¿æ¥åŒ…åºåˆ—åŒ–æˆåŠŸï¼Œé•¿åº¦: %då­—èŠ‚\n", len);
     
-    // ·¢ËÍÁ¬½Ó°ü
-    printf("·¢ËÍMQTT CONNECT°ü...\n");
+    // å‘é€è¿æ¥åŒ…
+    printf("å‘é€MQTT CONNECTåŒ…...\n");
 	AdapterDeviceSend(adapter, buf, len);
 
-    PrivTaskDelay(1000); // µÈ´ıÁ¬½Ó½¨Á¢
+    PrivTaskDelay(1000); // ç­‰å¾…è¿æ¥å»ºç«‹
 
-    // 3. ·¢ËÍMQTT PUBLISHÏûÏ¢£¨Ä£ÄâÕæÊµÉè±¸Í¨ĞÅ£©
-printf("¿ªÊ¼·¢ËÍÄ£ÄâÉè±¸ÏûÏ¢...\n");
+    // 3. å‘é€MQTT PUBLISHæ¶ˆæ¯ï¼ˆæ¨¡æ‹ŸçœŸå®è®¾å¤‡é€šä¿¡ï¼‰
+printf("å¼€å§‹å‘é€æ¨¡æ‹Ÿè®¾å¤‡æ¶ˆæ¯...\n");
 
-// ²âÊÔÏûÏ¢ÀàĞÍÊı×é
+// æµ‹è¯•æ¶ˆæ¯ç±»å‹æ•°ç»„
 const char* test_messages[] = {
-    // Éè±¸Êı¾İÉÏ±¨
+    // è®¾å¤‡æ•°æ®ä¸ŠæŠ¥
     "{\"type\":\"device_data\",\"data\":{\"name\":\"temperature\",\"value\":25.5}}",
     "{\"type\":\"device_data\",\"data\":{\"name\":\"humidity\",\"value\":65.2}}",
     "{\"type\":\"device_data\",\"data\":{\"name\":\"light_intensity\",\"value\":780}}",
     
-    // ¿ØÖÆÃüÁî£¨YeelightµÆÅİ£©
+    // æ§åˆ¶å‘½ä»¤ï¼ˆYeelightç¯æ³¡ï¼‰
     "{\"type\":\"control_command\",\"data\":{\"command\":\"turn_on\"}}",
     "{\"type\":\"control_command\",\"data\":{\"command\":\"set_brightness\",\"value\":80}}",
     "{\"type\":\"control_command\",\"data\":{\"command\":\"set_color\",\"r\":255,\"g\":100,\"b\":50}}",
@@ -727,22 +802,22 @@ const char* test_messages[] = {
 int message_count = sizeof(test_messages) / sizeof(test_messages[0]);
 
 for(int i = 0; i < message_count; ++i) {
-    const char* topic = "iot/devices/control";  // Ê¹ÓÃPython´úÂëÖĞµÄÖ÷Ìâ
+    const char* topic = "iot/devices/control";  // ä½¿ç”¨Pythonä»£ç ä¸­çš„ä¸»é¢˜
     
-    printf("·¢ËÍÏûÏ¢[%d/%d]:\n", i+1, message_count);
-    printf("  Ö÷Ìâ: %s\n", topic);
-    printf("  ÄÚÈİ: %s\n", test_messages[i]);
+    printf("å‘é€æ¶ˆæ¯[%d/%d]:\n", i+1, message_count);
+    printf("  ä¸»é¢˜: %s\n", topic);
+    printf("  å†…å®¹: %s\n", test_messages[i]);
     
-    // Ê¹ÓÃÊÊÅäÆ÷·¢ËÍ
+    // ä½¿ç”¨é€‚é…å™¨å‘é€
     int ret = AdapterMQTTPublish_QOS0(adapter, topic, (uint8_t*)test_messages[i]);
     
     if (ret == 0) {
-        printf("   ·¢ËÍ³É¹¦\n");
+        printf("   å‘é€æˆåŠŸ\n");
     } else {
-        printf("   ·¢ËÍÊ§°Ü£¬´íÎóÂë: %d\n", ret);
+        printf("   å‘é€å¤±è´¥ï¼Œé”™è¯¯ç : %d\n", ret);
     }
     
-    PrivTaskDelay(5000); // 2Ãë¼ä¸ô£¬±ãÓÚ¹Û²ì
+    PrivTaskDelay(5000); // 2ç§’é—´éš”ï¼Œä¾¿äºè§‚å¯Ÿ
 }
     
     return 0;
@@ -758,13 +833,13 @@ int AdapterMQTTPublish_QOS0(struct Adapter *adapter, char *topic, uint8_t* msg)
     MQTTString topicString = {.cstring = topic};
     uint32_t msg_len = strlen((char *)msg);
     
-    // ĞòÁĞ»¯PUBLISH°ü
+    // åºåˆ—åŒ–PUBLISHåŒ…
     int len = MQTTSerialize_publish(buf, sizeof(buf), 0, 0, 0, 0, topicString, msg, msg_len);
     if (len <= 0) {
         return -1;
     }
     
-    // Ê¹ÓÃÊÊÅäÆ÷·¢ËÍ
+    // ä½¿ç”¨é€‚é…å™¨å‘é€
 	AdapterDeviceSend(adapter, buf, len);
     
     return 0;

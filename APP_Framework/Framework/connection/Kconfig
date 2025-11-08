@@ -1,6 +1,6 @@
 menuconfig SUPPORT_CONNECTION_FRAMEWORK
         bool "support connection framework"
-        default n
+        default y
         select TRANSFORM_LAYER_ATTRIUBUTE
 
 if SUPPORT_CONNECTION_FRAMEWORK
@@ -52,7 +52,7 @@ if SUPPORT_CONNECTION_FRAMEWORK
 
         menuconfig CONNECTION_ADAPTER_WIFI
                 bool "Using wifi adapter device"
-                default n
+                default y
         if CONNECTION_ADAPTER_WIFI
         source "$APP_DIR/Framework/connection/wifi/Kconfig"
         endif

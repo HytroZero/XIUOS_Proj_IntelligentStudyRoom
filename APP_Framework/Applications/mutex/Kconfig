@@ -2,6 +2,6 @@ menu "mutex"
 
     menuconfig APPLICATION_MUTEX
         bool "Using mutex"
-        default n
+        default y
 
 endmenu

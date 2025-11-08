@@ -41,13 +41,16 @@ struct timer_func g_timer_func[TIMER_NUM];
 
 static void *timer_callback(void *args) 
 {
-    clockid_t clockid = *((clockid_t *)args);
+    // 从稳定的全局数组元素取 idx，避免把 pthread_args_t 误当 clockid_t*，也避免局部地址失效
+    int idx = *((int *)args);
 
     while (1) {
-        if (g_timer_func[clockid].user_timer_function != NULL) {
-            if (0 == sem_timedwait(&(timer_sem[clockid]), NULL)) {
-                g_timer_func[clockid].value.sival_ptr = &clockid;
-                g_timer_func[clockid].user_timer_function(g_timer_func[clockid].value);
+        if (g_timer_func[idx].user_timer_function != NULL) {
+            // 定时器由内核定时任务负责投递 sem，因此这里使用阻塞的 sem_wait 即可
+            if (0 == sem_wait(&(timer_sem[idx]))) {
+                // 使用 sival_int 传递 idx，更简单、稳妥
+                g_timer_func[idx].value.sival_int = idx;
+                g_timer_func[idx].user_timer_function(g_timer_func[idx].value);
             }
         }
     }
@@ -76,17 +79,22 @@ int timer_create(clockid_t clockid, struct sigevent * evp, timer_t * timerid)
 
     g_timer_func[clockid].value = evp->sigev_value;
     g_timer_func[clockid].user_timer_function = evp->sigev_notify_function;
+    // 保留原来的 timer_flags 获取逻辑（如果你的 UserTimerCreate 真的需要），但这可能是不合理的来源
     g_timer_func[clockid].timer_flags = *(int *)(evp->sigev_notify_attributes);
 
+    // 正确初始化 pthread 属性
     pthread_attr_t attr;
-    attr.schedparam.sched_priority = 22;
-    attr.stacksize = 2048;
+    pthread_attr_init(&attr);
+    struct sched_param sp = {0};
+    sp.sched_priority = 22;
+    pthread_attr_setschedparam(&attr, &sp);
+    pthread_attr_setstacksize(&attr, 2048);
 
-    pthread_args_t args;
-    args.pthread_name = timer_name;
-    args.arg = &clockid;
+    // 使用全局数组承载线程参数，避免传递局部变量地址
+    timer_idx[clockid] = (char)clockid;
 
-    pthread_create(&(timer_task[clockid]), &attr, &timer_callback, (void *)&args);
+    // 不再通过 pthread_args_t；直接传入 &timer_idx[clockid]
+    pthread_create(&(timer_task[clockid]), &attr, &timer_callback, (void *)&timer_idx[clockid]);
 
     timer_id = UserTimerCreate(timer_name, NULL, (void *)&(timer_sem[clockid]), clockid, g_timer_func[clockid].timer_flags);
     *timerid = timer_id;

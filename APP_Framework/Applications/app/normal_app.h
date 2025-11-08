@@ -5,17 +5,22 @@
 #include <cJSON.h>
 #include "mqtt/MQTTPacket.h"
 #include "mqtt/MQTTSubscribe.h"
+#define lw_print printf
 
-#define WIFI_SSID       "Factory"      
-#define WIFI_PASSWORD   "00000000" 
+#define WIFI_SSID       "4001"      
+#define WIFI_PASSWORD   "nmsmshsa" 
 
 /* 任务配置参数 */
 #define MQTT_TASK_PRIORITY    20
 #define TEMPERATURE_TASK_PRIORITY    20
 #define HUMIDITY_TASK_PRIORITY       20
+#define DETECT_TASK_PRIORITY       20
+#define DETECT_RECEIVE_TASK_PRIORITY       20
 #define SENSOR_TASK_STACK_SIZE      2048
 #define MQTT_TASK_STACK_SIZE      4096
-#define SENSOR_RUN_CYCLES            10   /* 运行周期数 */
+#define DETECT_TASK_STACK_SIZE      409600
+#define DETECT_RECEIVE_TASK_STACK_SIZE     2048
+#define SENSOR_RUN_CYCLES            10   /* 运行周期数，我改成死循环了 */
 #define LOCK_TIMEOUT_MS             1000  /* 锁获取超时时间 */
 
 static char mqtt_iot_ipaddr[] = {192, 168, 76, 154};
@@ -55,21 +60,31 @@ typedef struct {
 static int32_t temperature_task_id = -1;
 static int32_t humidity_task_id = -1;
 static int32_t mqtt_task_id = -1;
+static uint32_t detect_task_id = -1;
+static uint32_t detect_receive_task_id = -1;
+
 static uint8_t temperature_task_run = 1;
 static uint8_t humidity_task_run = 1;
 static uint8_t mqtt_task_run = 1;
+static uint8_t detect_task_run = 1;
+static uint8_t detect_receive_task_run = 1;
 
-int WifiInitAndConnect(void);
 void TemperatureTask(void *parameter);
 void HumidityTask(void *parameter);
+void MqttEdgeDeviceTask();
+void DetectTask(void *parameter);
+void ReceiveDetectTask(void *parameter);
 int CreateAndStartTasks(void);
 void StopSensorTasks(void);
 void MonitorSensorTasks(void);
-void MqttEdgeDeviceTask();
+
+int WifiInitAndConnect(void);
 SensorData GetSensorDataFromQueue(void);
 void GenerateLightControl(DeviceState state, LightControl *ctrl);
 void PublishDeviceStatus(int fd, SensorData sensor_data, DeviceState state, LightControl light_ctrl);
 const char* GetCurrentTimestamp(void);
+
+// Tests >>>>>>
 uint8_t CheckPersonPresence(void);
 float GetLightIntensity(void);
 float GetTemperature(void);

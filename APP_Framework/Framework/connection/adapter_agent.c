@@ -589,15 +589,15 @@ static int ATAgentInit(ATAgentType agent)
     PrivTaskCreate(&agent->at_handler, &attr, ATAgentReceiveProcess, agent);
 #else
     pthread_attr_t attr;
-    attr.schedparam.sched_priority = 25;
-    attr.stacksize = 4096;
+    // 正确初始化 attr，避免未初始化结构体导致不确定行为
+    pthread_attr_init(&attr);
+    struct sched_param sp = {0};
+    sp.sched_priority = 25;
+    pthread_attr_setschedparam(&attr, &sp);
+    pthread_attr_setstacksize(&attr, 4096);
 
-    char task_name[] = "at_agent";
-    pthread_args_t args;
-    args.pthread_name = task_name;
-    args.arg = (void *)agent;
-
-    PrivTaskCreate(&agent->at_handler, &attr, ATAgentReceiveProcess, (void *)&args);
+    // 直接把 agent 指针作为线程参数传递，避免 pthread_args_t 不被解包的问题
+    PrivTaskCreate(&agent->at_handler, &attr, ATAgentReceiveProcess, (void *)agent);
 #endif
 
     return result;

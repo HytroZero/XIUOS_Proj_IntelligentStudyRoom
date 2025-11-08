@@ -10,8 +10,8 @@ endif
 
 config ADAPTER_ESP8285_WIFI
         bool "Using wifi adapter device esp8285"
-        default n
-
+        default y
+        
 if ADAPTER_ESP8285_WIFI
     source "$APP_DIR/Framework/connection/wifi/esp8285_wifi/Kconfig"
 endif 
