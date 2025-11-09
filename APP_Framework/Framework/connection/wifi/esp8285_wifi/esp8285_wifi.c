@@ -107,15 +107,13 @@ static int Esp8285WifiOpen(struct Adapter *adapter)
     /*step2: init AT agent*/
     if (!adapter->agent) {
         char *agent_name = "wifi_uart_client";
-        if (EOK != InitATAgent(agent_name, adapter->fd, 512)) {
+        if (EOK != InitATAgent(agent_name, adapter->fd, 4096)) {  // 由512提升到4096
             printf("at agent init failed !\n");
             return -1;
         }
         ATAgentType at_agent = GetATAgent(agent_name);
-
         adapter->agent = at_agent;
     }
-
     AtSetReplyEndChar(adapter->agent,'O','K');
 
     ADAPTER_DEBUG("Esp8285Wifi open done\n");
@@ -209,20 +207,38 @@ static int Esp8285WifiSetUp(struct Adapter *adapter)
     strcat(cmd,"AT+CWJAP=");
     strcat(cmd,"\"");
     strcat(cmd,param->wifi_ssid);
-
     strcat(cmd,"\"");
     strcat(cmd,",");
     strcat(cmd,"\"");
     strcat(cmd,param->wifi_pwd);
-
     strcat(cmd,"\"");
     strcat(cmd,"\r\n");
 
-    ret = AtCmdConfigAndCheck(agent, cmd, "OK");
-    if(ret < 0) {
-        printf("%s %d cmd[%s] connect[%s] failed!\n",__func__,__LINE__,cmd,param->wifi_ssid);
+    // 使用更长超时，并解析实际回复文本
+    ATReplyType japi_reply = CreateATReply(512);
+    if (japi_reply == NULL) {
+        printf("%s %d at_create_resp failed!\n",__func__,__LINE__);
         return -1;
     }
+    ret = ATOrderSend(agent, 30, japi_reply, cmd);  // 30秒等待入网
+    if (ret < 0) {
+        printf("%s %d ATOrderSend CWJAP failed.\n",__func__,__LINE__);
+        DeleteATReply(japi_reply);
+        return -1;
+    }
+    result = GetReplyText(japi_reply);
+    if (!result) {
+        printf("%s %d get reply failed.\n",__func__,__LINE__);
+        DeleteATReply(japi_reply);
+        return -1;
+    }
+    printf("[reply result: %s]\n", result);
+    if (!strstr(result, "OK")) {
+        printf("%s %d cmd[%s] connect[%s] failed!\n",__func__,__LINE__,cmd,param->wifi_ssid);
+        DeleteATReply(japi_reply);
+        return -1;
+    }
+    DeleteATReply(japi_reply);
 
     /* check the wifi ip address */
     ATReplyType reply = CreateATReply(256);

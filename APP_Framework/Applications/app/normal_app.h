@@ -7,7 +7,6 @@
 #include "mqtt/MQTTSubscribe.h"
 #define lw_print printf
 
-
 /* 任务配置参数 */
 #define MQTT_TASK_PRIORITY    20
 #define TEMPERATURE_TASK_PRIORITY    20
@@ -21,12 +20,12 @@
 #define SENSOR_RUN_CYCLES            10   /* 运行周期数，我改成死循环了 */
 #define LOCK_TIMEOUT_MS             1000  /* 锁获取超时时间 */
 
-static char mqtt_iot_ipaddr[] = {192, 168, 76, 154};
-static char mqtt_iot_netmask[] = {255, 255, 255, 0};
-static char mqtt_iot_gwaddr[] = {192, 168, 76, 136};
+extern volatile int existing_object_count;
 
-static char mqtt_socket_port_iot[] = "1883";
-static char mqtt_ip_str_iot[] = "192.168.76.149";
+typedef struct{
+    char ipv4[50];
+    char port[10];
+} MqttServerAddr;
 
 // 设备状态枚举
 typedef enum {
@@ -49,11 +48,12 @@ typedef struct {
 
 // 需要的辅助函数声明
 typedef struct {
-    uint8_t person_present;
+    int person_present;
     float light_intensity;
     float temperature;
     float humidity;
 } SensorData;
+static SensorData sensor_data = {0, 0.0f, 0.0f, 0.0f};
 
 static int32_t temperature_task_id = -1;
 static int32_t humidity_task_id = -1;
@@ -69,23 +69,31 @@ static uint8_t detect_receive_task_run = 1;
 
 void TemperatureTask(void *parameter);
 void HumidityTask(void *parameter);
-void MqttEdgeDeviceTask();
+void MqttEdgeDeviceTask(MqttServerAddr* mqtt_server_addr);
 void DetectTask(void *parameter);
 void ReceiveDetectTask(void *parameter);
-int CreateAndStartTasks(void);
+int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port);
 void StopSensorTasks(void);
 void MonitorSensorTasks(void);
 
-int WifiInitAndConnect(void);
+int WifiInitAndConnect(char* ssid, char* password);
 SensorData GetSensorDataFromQueue(void);
 void GenerateLightControl(DeviceState state, LightControl *ctrl);
 void PublishDeviceStatus(int fd, SensorData sensor_data, DeviceState state, LightControl light_ctrl);
 const char* GetCurrentTimestamp(void);
 
 // Tests >>>>>>
+static char mqtt_iot_ipaddr[] = {192, 168, 76, 154};
+static char mqtt_iot_netmask[] = {255, 255, 255, 0};
+static char mqtt_iot_gwaddr[] = {192, 168, 76, 136};
+
+static char mqtt_socket_port_iot[] = "1883";
+static char mqtt_ip_str_iot[] = "192.168.76.149";
+
 uint8_t CheckPersonPresence(void);
 float GetLightIntensity(void);
 float GetTemperature(void);
 float GetHumidity(void);
+int MqttTest(void);
 
 #endif

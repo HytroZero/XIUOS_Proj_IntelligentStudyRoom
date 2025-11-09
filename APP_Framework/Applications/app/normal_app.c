@@ -1,5 +1,6 @@
 #include "normal_app.h"
 
+
 int WifiInitAndConnect(char* ssid, char* password)
 {
     int ret = 0;
@@ -25,6 +26,7 @@ int WifiInitAndConnect(char* ssid, char* password)
     strncpy((char *)param.wifi_ssid, ssid, sizeof(param.wifi_ssid) - 1);
     strncpy((char *)param.wifi_pwd, password, sizeof(param.wifi_pwd) - 1);
     
+
     // 确保字符串以null结尾
     param.wifi_ssid[sizeof(param.wifi_ssid) - 1] = '\0';
     param.wifi_pwd[sizeof(param.wifi_pwd) - 1] = '\0';
@@ -62,10 +64,14 @@ void TemperatureTask(void *parameter)
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
             temperature = SensorQuantityReadValue(temp);
             SensorUnlock();
-            if (temperature > 0)
+            if (temperature > 0) {
                 printf("Temperature : %d.%d C\n", temperature/10, temperature%10);
-            else
-                printf("Temperature : %d.%d C\n", temperature/10, -temperature%10);
+                sensor_data.temperature = temperature/10.0f;
+            }
+            else {
+                printf("Temperature : %d.%d C\n", -temperature/10, temperature%10);
+                sensor_data.temperature = -temperature/10.0f;
+            }
         }
         /* 任务延迟5秒 */
         UserTaskDelay(3000);
@@ -93,6 +99,7 @@ void HumidityTask(void *parameter)
             humidity = SensorQuantityReadValue(humi);
             SensorUnlock();
             printf("Humidity : %d.%d %%RH\n", humidity/10, humidity%10);
+            sensor_data.humidity = humidity/10.0f;
         }
         
         UserTaskDelay(3000);
@@ -113,7 +120,6 @@ void DetectTask(void *parameter)
     k210_detect("face.json");
 }
 
-extern volatile int object_exist_or_not;
 /**
  * @description: 用来接收k210人脸识别任务函数运行时产生的结果 object_exist_or_not
  * @param parameter - 任务参数
@@ -123,21 +129,28 @@ void DetectReceiveTask(void *parameter) {
     int cycle_count = 0;
     while (detect_task_run) {
         printf("\n=== Detect Measurement Cycle %d ===\n", cycle_count + 1);
-        printf("Data: object_exist_or_not: %d\n", object_exist_or_not);
+        printf("Data: existing_object_count: %d\n", existing_object_count);
+        sensor_data.person_present = existing_object_count > 0 ? 1 : 0;
         UserTaskDelay(3000);
         cycle_count++;
     }
 }
 
-
 /**
  * @description: 创建并启动传感器任务
  * @return 成功: 0, 失败: -1
  */
-int CreateAndStartTasks(void)
+int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
 {
+    static MqttServerAddr mqtt_server_addr;
+    strncpy(mqtt_server_addr.ipv4, mqtt_ipv4, sizeof(mqtt_server_addr.ipv4) - 1);
+    strncpy(mqtt_server_addr.port, mqtt_port, sizeof(mqtt_server_addr.port) - 1);
+    mqtt_server_addr.ipv4[sizeof(mqtt_server_addr.ipv4) - 1] = '\0';
+    mqtt_server_addr.port[sizeof(mqtt_server_addr.port) - 1] = '\0';
+    printf("MQTT server address: %s:%s\n", mqtt_server_addr.ipv4, mqtt_server_addr.port);
+
     UtaskType temp_task, humi_task, mqtt_task, detect_task, detect_receive_task;
-    
+
     printf(" Initializing sensor tasks...\n");
     SensorMutexInit();
     /* 创建温度传感器任务 */
@@ -170,7 +183,7 @@ int CreateAndStartTasks(void)
 	 /* 创建MQTT边缘设备任务 */
     strncpy(mqtt_task.name, "mqtt_edge_task", NAME_NUM_MAX - 1);
     mqtt_task.func_entry = (void *)MqttEdgeDeviceTask;
-    mqtt_task.func_param = NULL;
+    mqtt_task.func_param = (void *)(&mqtt_server_addr);
     mqtt_task.stack_size = MQTT_TASK_STACK_SIZE;   // MQTT任务需要较大栈空间
     mqtt_task.prio = MQTT_TASK_PRIORITY;           // 设置合适的优先级
     
@@ -216,9 +229,24 @@ int CreateAndStartTasks(void)
     }
 
     // /* 启动任务 */
+
+    UserTaskDelay(100);
+    if (UserTaskStartup(detect_task_id) != EOK) {
+        printf(" Failed to start detect task\n");
+        UserTaskDelete(detect_task_id);
+        return -1;
+    }
+
+    UserTaskDelay(5000); // 长一点
+    if (UserTaskStartup(detect_receive_task_id) != EOK) {
+        printf(" Failed to start detect_receive task\n");
+        UserTaskDelete(detect_receive_task_id);
+        return -1;
+    }
+
     // if (UserTaskStartup(temperature_task_id) != EOK) {
     //     printf(" Failed to start temperature task\n");
-	// 	UserTaskDelete(temperature_task_id);
+	// 	   UserTaskDelete(temperature_task_id);
     //     return -1;
     // }
     
@@ -229,27 +257,13 @@ int CreateAndStartTasks(void)
     //     return -1;
     // }
 
-	// UserTaskDelay(100);
-    // if (UserTaskStartup(mqtt_task_id) != EOK) {
-    //     printf(" Failed to start mqtt task\n");
-    //     UserTaskDelete(mqtt_task_id);
-    //     return -1;
-    // }
-
-
-    UserTaskDelay(100);
-    if (UserTaskStartup(detect_task_id) != EOK) {
-        printf(" Failed to start detect task\n");
-        UserTaskDelete(detect_task_id);
+	UserTaskDelay(100);
+    if (UserTaskStartup(mqtt_task_id) != EOK) {
+        printf(" Failed to start mqtt task\n");
+        UserTaskDelete(mqtt_task_id);
         return -1;
     }
 
-    UserTaskDelay(100);
-    if (UserTaskStartup(detect_receive_task_id) != EOK) {
-        printf(" Failed to start detect_receive task\n");
-        UserTaskDelete(detect_receive_task_id);
-        return -1;
-    }
 
     printf(" tasks created successfully:\n");
     printf("   - Temperature Task: ID=%d, Priority=%d\n", temperature_task_id, TEMPERATURE_TASK_PRIORITY);
@@ -324,7 +338,7 @@ void MonitorSensorTasks(void)
 
 static AdapterType g_mqtt_adapter = NULL;
 
-void MqttEdgeDeviceTask()
+void MqttEdgeDeviceTask(MqttServerAddr* mqtt_server_addr)
 {
     int ret;
     DeviceState current_state = STATE_NO_PERSON;
@@ -339,23 +353,22 @@ void MqttEdgeDeviceTask()
     }
 
     // 设置MQTT连接参数
-    const char *client_id = "edge_device_001";
-    const char *username = NULL;  // 根据实际情况设置
+    const char *client_id = "xiuos_device_001";
+    const char *username = NULL;  // 根据实际情况设置，mosquitto的config写allow_anonymous true即可
     const char *password = NULL;  // 根据实际情况设置
 
     // MQTT连接循环
 MQTT_CONNECT:
     // 使用适配器API连接MQTT服务器
-    ret = AdapterDeviceMqttConnect(g_mqtt_adapter, mqtt_ip_str_iot, 
-                                 mqtt_socket_port_iot, client_id, 
-                                 username, password);
+    ret = AdapterDeviceMqttConnect(g_mqtt_adapter, mqtt_server_addr->ipv4, mqtt_server_addr->port, client_id,  username, password);
     if (ret < 0) {
         lw_print("MQTT connect failed: %d\n", ret);
+        lw_print("IPv4: %s, Port: %s\n", mqtt_server_addr->ipv4, mqtt_server_addr->port);
         PrivTaskDelay(3000);
         goto MQTT_CONNECT;
     }
 
-    lw_print("MQTT connect %s:%s success\n", mqtt_ip_str_iot, mqtt_socket_port_iot);
+    lw_print("MQTT connect %s:%s success\n", mqtt_server_addr->ipv4, mqtt_server_addr->port);
 
     // 订阅主题
     const char *subscribe_topic = "iot/devices/#";
@@ -364,16 +377,15 @@ MQTT_CONNECT:
     lw_print("Subscribe %s success\n", subscribe_topic);
 
     // 主循环
-    uint32_t tick_count = 0;
     uint8_t no_mqtt_msg_exchange = 1;
     
     // 接收缓冲区
     uint8_t recv_buf[512];
     char recv_topic[128];
 
-    while(1) {
-        tick_count++;
-        
+    while(1) { 
+        UserTaskDelay(5000); // 软件延迟可能会卡,改成TaskDelay
+
         // 处理MQTT消息接收（非阻塞）
         ssize_t recv_len = AdapterDeviceMqttRecv(g_mqtt_adapter, subscribe_topic, recv_buf, sizeof(recv_buf));
         if (recv_len > 0) {
@@ -383,60 +395,51 @@ MQTT_CONNECT:
             no_mqtt_msg_exchange = 0;
         }
 
-        // 每5秒处理一次传感器数据并发布状态
-        if(tick_count % 500 == 0) {
-            // 从内部消息队列获取传感器数据
-            SensorData sensor_data = GetSensorDataFromQueue();
-            
-            // 状态机逻辑
-            previous_state = current_state;
-            
-            if (!sensor_data.person_present) {
-                current_state = STATE_NO_PERSON;
-            } else if (previous_state == STATE_NO_PERSON && sensor_data.person_present) {
-                current_state = STATE_PERSON_ENTER;
-            } else if (sensor_data.person_present && sensor_data.light_intensity < 50) {
-                current_state = STATE_PERSON_DARK;
-            } else if (sensor_data.person_present && sensor_data.light_intensity >= 50) {
-                current_state = STATE_PERSON_BRIGHT;
-            } else if (sensor_data.humidity > 80.0) {
-                current_state = STATE_HIGH_HUMIDITY;
-            } else if (sensor_data.temperature > 30.0) {
-                current_state = STATE_HIGH_TEMPERATURE;
-            } else {
-                current_state = STATE_NORMAL;
-            }
-            
-            // 根据状态生成灯光控制命令
-            GenerateLightControl(current_state, &light_ctrl);
-            
-            // 发布设备状态消息
-            PublishDeviceStatusUsingAdapter(sensor_data, current_state, light_ctrl);
-            
-            no_mqtt_msg_exchange = 0;
+        // 从内部消息队列获取传感器数据
+        // SensorData sensor_data = GetSensorDataFromQueue();
+        
+        // 状态机逻辑
+        previous_state = current_state;
+        
+        if (!sensor_data.person_present) {
+            current_state = STATE_NO_PERSON;
+        } else if (previous_state == STATE_NO_PERSON && sensor_data.person_present) {
+            current_state = STATE_PERSON_ENTER;
+        } else if (sensor_data.person_present && sensor_data.light_intensity < 50) {
+            current_state = STATE_PERSON_DARK;
+        } else if (sensor_data.person_present && sensor_data.light_intensity >= 50) {
+            current_state = STATE_PERSON_BRIGHT;
+        } else if (sensor_data.humidity > 80.0) {
+            current_state = STATE_HIGH_HUMIDITY;
+        } else if (sensor_data.temperature > 30.0) {
+            current_state = STATE_HIGH_TEMPERATURE;
+        } else {
+            current_state = STATE_NORMAL;
         }
-
-        // 每30秒检查连接状态（如果没有数据交换）
-        if(tick_count % 3000 == 0) {
-            if(no_mqtt_msg_exchange) {
-                // 尝试发送心跳或检查连接状态
-                // 这里可以发送一个空消息或使用适配器的心跳功能
-                if (!CheckMqttConnection()) {
-                    lw_print("Connection lost, reconnecting...\n");
-                    AdapterDeviceMqttDisconnect(g_mqtt_adapter);
-                    PrivTaskDelay(3000);
-                    goto MQTT_CONNECT;
-                }
+        
+        // 根据状态生成灯光控制命令
+        GenerateLightControl(current_state, &light_ctrl);
+        
+        // 发布设备状态消息
+        PublishDeviceStatusUsingAdapter(sensor_data, current_state, light_ctrl);
+        
+        if(no_mqtt_msg_exchange) {
+            // 尝试发送心跳或检查连接状态
+            // 这里可以发送一个空消息或使用适配器的心跳功能
+            if (!CheckMqttConnection()) {
+                lw_print("Connection lost, reconnecting...\n");
+                AdapterDeviceMqttDisconnect(g_mqtt_adapter);
+                PrivTaskDelay(3000);
+                goto MQTT_CONNECT;
+            } else {
                 lw_print("Connection alive\n");
             }
-            no_mqtt_msg_exchange = 1;
         }
-
-        PrivTaskDelay(10); // 10ms延迟
+        no_mqtt_msg_exchange = 1;
     }
 
-    // 清理资源
-    AdapterDeviceMqttDisconnect(g_mqtt_adapter);
+    // 清理资源，活不到这一天，按下reset一键清理
+    // AdapterDeviceMqttDisconnect(g_mqtt_adapter);
 }
 
 // 处理接收到的MQTT消息
@@ -614,7 +617,7 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
     cJSON *root = cJSON_CreateObject();
     
     // 添加设备信息
-    cJSON_AddStringToObject(root, "device_id", "edge_device_001");
+    cJSON_AddStringToObject(root, "device_id", "xiuos_device_001");
     
     // 添加传感器数据
     cJSON *sensors = cJSON_CreateObject();
@@ -638,8 +641,6 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
     cJSON_AddNumberToObject(control, "color_temp", light_ctrl.color_temp);
     cJSON_AddNumberToObject(control, "color_mode", light_ctrl.color_mode);
     cJSON_AddItemToObject(root, "light_control", control);
-    
-
     
     // 生成JSON字符串
     char *json_str = cJSON_PrintUnformatted(root);
@@ -740,7 +741,7 @@ int MqttTest()
     }
 
     // 1. 使用适配器API连接MQTT服务器
-    const char *ip = "192.168.76.149";
+    const char *ip = "192.168.5.96";
     const char *port = "1883";
     enum NetRoleType net_role = CLIENT;
     enum IpType ip_type = IPV4;
@@ -781,10 +782,10 @@ int MqttTest()
     PrivTaskDelay(1000); // 等待连接建立
 
     // 3. 发送MQTT PUBLISH消息（模拟真实设备通信）
-printf("开始发送模拟设备消息...\n");
+    printf("开始发送模拟设备消息...\n");
 
-// 测试消息类型数组
-const char* test_messages[] = {
+    // 测试消息类型数组
+    const char* test_messages[] = {
     // 设备数据上报
     "{\"type\":\"device_data\",\"data\":{\"name\":\"temperature\",\"value\":25.5}}",
     "{\"type\":\"device_data\",\"data\":{\"name\":\"humidity\",\"value\":65.2}}",
@@ -797,29 +798,29 @@ const char* test_messages[] = {
     "{\"type\":\"control_command\",\"data\":{\"command\":\"turn_off\"}}",
     
 
-};
+    };
 
-int message_count = sizeof(test_messages) / sizeof(test_messages[0]);
+    int message_count = sizeof(test_messages) / sizeof(test_messages[0]);
 
-for(int i = 0; i < message_count; ++i) {
-    const char* topic = "iot/devices/control";  // 使用Python代码中的主题
-    
-    printf("发送消息[%d/%d]:\n", i+1, message_count);
-    printf("  主题: %s\n", topic);
-    printf("  内容: %s\n", test_messages[i]);
-    
-    // 使用适配器发送
-    int ret = AdapterMQTTPublish_QOS0(adapter, topic, (uint8_t*)test_messages[i]);
-    
-    if (ret == 0) {
-        printf("   发送成功\n");
-    } else {
-        printf("   发送失败，错误码: %d\n", ret);
+    for(int i = 0; i < message_count; ++i) {
+        const char* topic = "iot/devices/control";  // 使用Python代码中的主题
+        
+        printf("发送消息[%d/%d]:\n", i+1, message_count);
+        printf("  主题: %s\n", topic);
+        printf("  内容: %s\n", test_messages[i]);
+        
+        // 使用适配器发送
+        int ret = AdapterMQTTPublish_QOS0(adapter, topic, (uint8_t*)test_messages[i]);
+        
+        if (ret == 0) {
+            printf("   发送成功\n");
+        } else {
+            printf("   发送失败，错误码: %d\n", ret);
+        }
+        
+        PrivTaskDelay(5000); // 2秒间隔，便于观察
     }
-    
-    PrivTaskDelay(5000); // 2秒间隔，便于观察
-}
-    
+        
     return 0;
 }
 

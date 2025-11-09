@@ -53,6 +53,7 @@ class MessageParser:
         """解析JSON格式的消息"""
         try:
             message = json.loads(raw_message)
+            logger.info(f"Received message: {message}")
             if "type" not in message or "data" not in message:
                 raise ValueError("Message must contain 'type' and 'data' fields")
             return message
@@ -64,8 +65,8 @@ class MessageParser:
             raise
 
 
-class IoTServer:
-    """MQTT服务端主类"""
+class IoTProcessClient:
+    """MQTT客户端"""
 
     def __init__(self, config: Dict[str, Any]):
         client_id = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
@@ -156,7 +157,7 @@ if __name__ == "__main__":
     }
 
     # 创建服务器实例
-    server = IoTServer(config)
+    server = IoTProcessClient(config)
 
     # 注册消息处理函数（处理设备数据和控制命令）
     @server.message_handler.register("device_data")
