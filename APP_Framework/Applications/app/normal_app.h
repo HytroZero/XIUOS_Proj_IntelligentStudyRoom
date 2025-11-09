@@ -7,8 +7,6 @@
 #include "mqtt/MQTTSubscribe.h"
 #define lw_print printf
 
-#define WIFI_SSID       "4001"      
-#define WIFI_PASSWORD   "nmsmshsa" 
 
 /* 任务配置参数 */
 #define MQTT_TASK_PRIORITY    20

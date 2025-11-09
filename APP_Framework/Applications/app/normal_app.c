@@ -1,6 +1,6 @@
 #include "normal_app.h"
 
-int WifiInitAndConnect(void)
+int WifiInitAndConnect(char* ssid, char* password)
 {
     int ret = 0;
     
@@ -22,8 +22,8 @@ int WifiInitAndConnect(void)
     // 3. 配置Wi-Fi连接参数（使用宏定义）
     static struct WifiParam param;
     memset(&param, 0, sizeof(struct WifiParam));
-    strncpy((char *)param.wifi_ssid, WIFI_SSID, sizeof(param.wifi_ssid) - 1);
-    strncpy((char *)param.wifi_pwd, WIFI_PASSWORD, sizeof(param.wifi_pwd) - 1);
+    strncpy((char *)param.wifi_ssid, ssid, sizeof(param.wifi_ssid) - 1);
+    strncpy((char *)param.wifi_pwd, password, sizeof(param.wifi_pwd) - 1);
     
     // 确保字符串以null结尾
     param.wifi_ssid[sizeof(param.wifi_ssid) - 1] = '\0';
@@ -32,7 +32,7 @@ int WifiInitAndConnect(void)
     adapter->adapter_param = &param;
     
     // 4. 执行连接操作
-    printf("Connecting to Wi-Fi: %s...\n", WIFI_SSID);
+    printf("Connecting to Wi-Fi: %s...\n", ssid);
     ret = AdapterDeviceSetUp(adapter);
     if (ret != 0) {
         printf("Wi-Fi connection failed! Error: %d\n", ret);
@@ -41,7 +41,7 @@ int WifiInitAndConnect(void)
         return ret;
     }
     
-    printf("Wi-Fi connected successfully to: %s\n", WIFI_SSID);
+    printf("Wi-Fi connected successfully to: %s\n", ssid);
     
     return ret;
 }
