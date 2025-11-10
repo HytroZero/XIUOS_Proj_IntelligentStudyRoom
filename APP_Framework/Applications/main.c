@@ -38,7 +38,7 @@ int main(void)
     // k210_detect("face.json");
 
     WifiInitAndConnect("4001", "nmsmshsa");
-    MqttTest();
+    // MqttTest();
 
     printf("Creating parallel tasks for all...\n");
     if (CreateAndStartTasks("192.168.5.96", "1883") < 0) {

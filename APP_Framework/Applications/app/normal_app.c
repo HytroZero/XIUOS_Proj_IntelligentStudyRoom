@@ -345,62 +345,107 @@ void MqttEdgeDeviceTask(MqttServerAddr* mqtt_server_addr)
     DeviceState previous_state = STATE_NO_PERSON;
     LightControl light_ctrl = {0};
 
-    // 查找并初始化WiFi适配器
+    // 查找并初始化WiFi适配器，沿用 MqttTest 的连接方式
     g_mqtt_adapter = AdapterDeviceFindByName(ADAPTER_WIFI_NAME);
     if (!g_mqtt_adapter) {
         lw_print("Failed to find WiFi adapter\n");
         return;
     }
+    g_mqtt_adapter->socket.protocal = SOCKET_PROTOCOL_TCP;
 
-    // 设置MQTT连接参数
     const char *client_id = "xiuos_device_001";
-    const char *username = NULL;  // 根据实际情况设置，mosquitto的config写allow_anonymous true即可
-    const char *password = NULL;  // 根据实际情况设置
+    const char *subscribe_topic = "iot/devices/#";
+    const char *status_topic = "iot/devices/status";
+    const char *ping_topic = "iot/devices/ping";
 
-    // MQTT连接循环
 MQTT_CONNECT:
-    // 使用适配器API连接MQTT服务器
-    ret = AdapterDeviceMqttConnect(g_mqtt_adapter, mqtt_server_addr->ipv4, mqtt_server_addr->port, client_id,  username, password);
+    // 1) TCP连接到 MQTT 服务器
+    lw_print("Connecting MQTT TCP: %s:%s ...\n", mqtt_server_addr->ipv4, mqtt_server_addr->port);
+    ret = AdapterDeviceConnect(g_mqtt_adapter, CLIENT, mqtt_server_addr->ipv4, mqtt_server_addr->port, IPV4);
     if (ret < 0) {
-        lw_print("MQTT connect failed: %d\n", ret);
-        lw_print("IPv4: %s, Port: %s\n", mqtt_server_addr->ipv4, mqtt_server_addr->port);
+        lw_print("TCP connect failed: %d\n", ret);
         PrivTaskDelay(3000);
         goto MQTT_CONNECT;
     }
+    lw_print("TCP connected to %s:%s\n", mqtt_server_addr->ipv4, mqtt_server_addr->port);
 
-    lw_print("MQTT connect %s:%s success\n", mqtt_server_addr->ipv4, mqtt_server_addr->port);
+    // 2) 发送 MQTT CONNECT（参考 MqttTest）
+    {
+        MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+        uint8_t conn_buf[256];
+        int conn_len;
 
-    // 订阅主题
-    const char *subscribe_topic = "iot/devices/#";
-    // 注意：订阅功能可能需要通过其他API实现，这里假设适配器支持
-    
-    lw_print("Subscribe %s success\n", subscribe_topic);
+        data.clientID.cstring = (char *)client_id;
+        data.keepAliveInterval = 60;
+        data.username.cstring = NULL;
+        data.password.cstring = NULL;
+        data.MQTTVersion = 4;     // MQTT 3.1.1
+        data.cleansession = 1;
+
+        conn_len = MQTTSerialize_connect(conn_buf, sizeof(conn_buf), &data);
+        if (conn_len <= 0) {
+            lw_print("MQTT CONNECT serialize failed\n");
+            AdapterDeviceClose(g_mqtt_adapter);
+            PrivTaskDelay(3000);
+            goto MQTT_CONNECT;
+        }
+        AdapterDeviceSend(g_mqtt_adapter, conn_buf, conn_len);
+        lw_print("MQTT CONNECT sent (%d bytes)\n", conn_len);
+        PrivTaskDelay(500);
+    }
+
+    // 3) 订阅主题（QOS0）
+    {
+        uint8_t sub_buf[200];
+        MQTTString topic = {.cstring = (char *)subscribe_topic};
+        int qos0 = 0;
+        int sub_len = MQTTSerialize_subscribe(sub_buf, sizeof(sub_buf), 0, 1 /* packet id */, 1, &topic, &qos0);
+        if (sub_len > 0) {
+            AdapterDeviceSend(g_mqtt_adapter, sub_buf, sub_len);
+            lw_print("Subscribe %s success (len=%d)\n", subscribe_topic, sub_len);
+        } else {
+            lw_print("Subscribe %s failed to serialize\n", subscribe_topic);
+        }
+    }
 
     // 主循环
     uint8_t no_mqtt_msg_exchange = 1;
-    
+
     // 接收缓冲区
     uint8_t recv_buf[512];
-    char recv_topic[128];
 
-    while(1) { 
-        UserTaskDelay(5000); // 软件延迟可能会卡,改成TaskDelay
+    while (1) {
+        UserTaskDelay(5000);
 
-        // 处理MQTT消息接收（非阻塞）
-        ssize_t recv_len = AdapterDeviceMqttRecv(g_mqtt_adapter, subscribe_topic, recv_buf, sizeof(recv_buf));
+        // 尝试接收消息并反序列化 PUBLISH 载荷
+        ssize_t recv_len = AdapterDeviceRecv(g_mqtt_adapter, recv_buf, sizeof(recv_buf));
         if (recv_len > 0) {
-            // 处理接收到的消息
-            lw_print("Received MQTT message, len: %d\n", recv_len);
-            ProcessMqttMessage(recv_buf, recv_len);
-            no_mqtt_msg_exchange = 0;
+            unsigned char dup, retained;
+            int qos;
+            unsigned short packetid;
+            MQTTString topicName;
+            unsigned char *payload = NULL;
+            int payloadlen = 0;
+
+            int ok = MQTTDeserialize_publish(&dup, &qos, &retained, &packetid,
+                                             &topicName, &payload, &payloadlen,
+                                             recv_buf, (int)recv_len);
+            if (ok == 1 && payload && payloadlen > 0) {
+                lw_print("Received MQTT publish: topic=%.*s, payload_len=%d\n",
+                         topicName.lenstring.len, topicName.lenstring.data, payloadlen);
+                ProcessMqttMessage(payload, payloadlen);
+                no_mqtt_msg_exchange = 0;
+            } else {
+                // 非 PUBLISH 或解析失败，忽略
+            }
         }
 
         // 从内部消息队列获取传感器数据
-        // SensorData sensor_data = GetSensorDataFromQueue();
-        
+        SensorData sensor_data = GetSensorDataFromQueue();
+
         // 状态机逻辑
         previous_state = current_state;
-        
+
         if (!sensor_data.person_present) {
             current_state = STATE_NO_PERSON;
         } else if (previous_state == STATE_NO_PERSON && sensor_data.person_present) {
@@ -416,19 +461,54 @@ MQTT_CONNECT:
         } else {
             current_state = STATE_NORMAL;
         }
-        
+
         // 根据状态生成灯光控制命令
         GenerateLightControl(current_state, &light_ctrl);
-        
-        // 发布设备状态消息
-        PublishDeviceStatusUsingAdapter(sensor_data, current_state, light_ctrl);
-        
-        if(no_mqtt_msg_exchange) {
-            // 尝试发送心跳或检查连接状态
-            // 这里可以发送一个空消息或使用适配器的心跳功能
-            if (!CheckMqttConnection()) {
+
+        // 发布设备状态（不再使用 AdapterDeviceMqttSend，改用 QOS0 发布）
+        {
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddStringToObject(root, "device_id", client_id);
+
+            cJSON *sensors = cJSON_CreateObject();
+            cJSON_AddBoolToObject(sensors, "person_present", sensor_data.person_present);
+            cJSON_AddNumberToObject(sensors, "light_intensity", sensor_data.light_intensity);
+            cJSON_AddNumberToObject(sensors, "temperature", sensor_data.temperature);
+            cJSON_AddNumberToObject(sensors, "humidity", sensor_data.humidity);
+            cJSON_AddItemToObject(root, "sensor_data", sensors);
+
+            const char *state_str[] = {
+                "no_person", "person_enter", "person_dark", "person_bright",
+                "high_humidity", "high_temperature", "normal"
+            };
+            cJSON_AddStringToObject(root, "device_state", state_str[current_state]);
+
+            // cJSON *control = cJSON_CreateObject();
+            // cJSON_AddBoolToObject(control, "power", light_ctrl.power);
+            // cJSON_AddNumberToObject(control, "brightness", light_ctrl.brightness);
+            // cJSON_AddNumberToObject(control, "color_temp", light_ctrl.color_temp);
+            // cJSON_AddNumberToObject(control, "color_mode", light_ctrl.color_mode);
+            // cJSON_AddItemToObject(root, "light_control", control);
+
+            char *json_str = cJSON_PrintUnformatted(root);
+            lw_print("Publishing: %s\n", json_str);
+
+            if (AdapterMQTTPublish_QOS0(g_mqtt_adapter, (char *)status_topic, (uint8_t*)json_str) == 0) {
+                lw_print("Publish success\n");
+            } else {
+                lw_print("Publish failed\n");
+            }
+
+            cJSON_free(json_str);
+            cJSON_Delete(root);
+        }
+
+        // 心跳/连接检查：尝试发一个 ping（QOS0）
+        if (no_mqtt_msg_exchange) {
+            const char *ping_payload = "ping";
+            if (AdapterMQTTPublish_QOS0(g_mqtt_adapter, (char *)ping_topic, (uint8_t*)ping_payload) != 0) {
                 lw_print("Connection lost, reconnecting...\n");
-                AdapterDeviceMqttDisconnect(g_mqtt_adapter);
+                AdapterDeviceClose(g_mqtt_adapter);
                 PrivTaskDelay(3000);
                 goto MQTT_CONNECT;
             } else {
