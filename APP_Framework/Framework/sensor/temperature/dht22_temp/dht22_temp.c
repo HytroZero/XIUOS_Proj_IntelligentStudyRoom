@@ -20,39 +20,39 @@
 
 #include <sensor.h>
 
-/* DHT22Ê±Ğò²ÎÊı£¨µ¥Î»£ºÎ¢Ãë£©- ¸ù¾İËµÃ÷Êé¾«È·ÉèÖÃ */
-#define DHT22_START_SIGNAL_DURATION      500     /* ÆğÊ¼ĞÅºÅ500us */
-#define DHT22_RESPONSE_TIMEOUT           1000    /* ÏìÓ¦³¬Ê±1ms */
-#define DHT22_BIT_START_DURATION         50      /* Êı¾İÎ»ÆğÊ¼50us */
-#define DHT22_BIT_0_MAX_DURATION         28      /* 0Î»¸ßµçÆ½<28us */
-#define DHT22_BIT_1_MIN_DURATION         50      /* 1Î»¸ßµçÆ½70us */
-#define DHT22_SAMPLING_INTERVAL_MS       2000    /* ²ÉÑù¼ä¸ô2Ãë */
+/* DHT22æ—¶åºå‚æ•°ï¼ˆå•ä½ï¼šå¾®ç§’ï¼‰- æ ¹æ®è¯´æ˜ä¹¦ç²¾ç¡®è®¾ç½® */
+#define DHT22_START_SIGNAL_DURATION      500     /* èµ·å§‹ä¿¡å·500us */
+#define DHT22_RESPONSE_TIMEOUT           1000    /* å“åº”è¶…æ—¶1ms */
+#define DHT22_BIT_START_DURATION         50      /* æ•°æ®ä½èµ·å§‹50us */
+#define DHT22_BIT_0_MAX_DURATION         28      /* 0ä½é«˜ç”µå¹³<28us */
+#define DHT22_BIT_1_MIN_DURATION         50      /* 1ä½é«˜ç”µå¹³70us */
+#define DHT22_SAMPLING_INTERVAL_MS       2000    /* é‡‡æ ·é—´éš”2ç§’ */
 #define NULL_PARAMETER 0
 
 static struct SensorDevice dht22;
 
-/* ´«¸ĞÆ÷ĞÅÏ¢ */
+/* ä¼ æ„Ÿå™¨ä¿¡æ¯ */
 static struct SensorProductInfo info =
 {
     (SENSOR_ABILITY_HUMI | SENSOR_ABILITY_TEMP),
-    "Aosong",                   /* ³§ÉÌÃû³Æ */
-    "DHT22",                    /* ´«¸ĞÆ÷ĞÍºÅ */
+    "Aosong",                   /* å‚å•†åç§° */
+    "DHT22",                    /* ä¼ æ„Ÿå™¨å‹å· */
 };
 
 /**
- * @description: Î¢Ãë¼¶ÑÓÊ±º¯Êı
- * @param us - Î¢ÃëÊı
+ * @description: å¾®ç§’çº§å»¶æ—¶å‡½æ•°
+ * @param us - å¾®ç§’æ•°
  */
 static void DHT22_DelayUs(uint32_t us)
 {
-    // 400MHzÓÅ»¯²ÎÊı
+    // 400MHzä¼˜åŒ–å‚æ•°
     #define CPU_400MHZ_LOOPS_PER_US 62
     
     if (us == 0) return;
     
     volatile uint32_t count = us * CPU_400MHZ_LOOPS_PER_US;
     
-    // ±àÒëÆ÷¼æÈİĞÔ´¦Àí
+    // ç¼–è¯‘å™¨å…¼å®¹æ€§å¤„ç†
     #if defined(__GNUC__)
     while (count--) {
         __asm__ __volatile__ ("nop");
@@ -63,20 +63,20 @@ static void DHT22_DelayUs(uint32_t us)
 }
 
 /**
- * @description: ÅäÖÃGPIOÒı½ÅÄ£Ê½ - »ùÓÚ²Î¿¼´úÂëĞŞÕı
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
- * @param mode - Òı½ÅÄ£Ê½
+ * @description: é…ç½®GPIOå¼•è„šæ¨¡å¼ - åŸºäºå‚è€ƒä»£ç ä¿®æ­£
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
+ * @param mode - å¼•è„šæ¨¡å¼
  * @return success : EOK error : -1
  */
 static int DHT22_ConfigPinMode(struct SensorDevice *sdev, int mode)
 {
     struct PinParam pin_parameter;
     
-    /* ÍêÈ«³õÊ¼»¯½á¹¹Ìå - ²Î¿¼Ê¾Àı´úÂë */
+    /* å®Œå…¨åˆå§‹åŒ–ç»“æ„ä½“ - å‚è€ƒç¤ºä¾‹ä»£ç  */
     memset(&pin_parameter, 0, sizeof(struct PinParam));
-    pin_parameter.cmd = GPIO_CONFIG_MODE;  /* Ê¹ÓÃÕıÈ·µÄÅäÖÃÃüÁî */
+    pin_parameter.cmd = GPIO_CONFIG_MODE;  /* ä½¿ç”¨æ­£ç¡®çš„é…ç½®å‘½ä»¤ */
     pin_parameter.pin = SENSOR_DEVICE_DHT22_GPIO_PIN;
-    pin_parameter.mode = mode;            /* Í¨¹ımode×Ö¶ÎÉèÖÃÄ£Ê½ */
+    pin_parameter.mode = mode;            /* é€šè¿‡modeå­—æ®µè®¾ç½®æ¨¡å¼ */
 
     struct PrivIoctlCfg ioctl_cfg;
     ioctl_cfg.ioctl_driver_type = PIN_TYPE;
@@ -96,22 +96,22 @@ static int DHT22_ConfigPinMode(struct SensorDevice *sdev, int mode)
 }
 
 /**
- * @description: ÉèÖÃGPIOÒı½ÅµçÆ½ - È·±£ÏÈÉèÖÃÄ£Ê½
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
- * @param level - µçÆ½Öµ (0:µÍµçÆ½, 1:¸ßµçÆ½)
+ * @description: è®¾ç½®GPIOå¼•è„šç”µå¹³ - ç¡®ä¿å…ˆè®¾ç½®æ¨¡å¼
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
+ * @param level - ç”µå¹³å€¼ (0:ä½ç”µå¹³, 1:é«˜ç”µå¹³)
  * @return success : 0 error : -1
  */
 static int DHT22_SetPinLevel(struct SensorDevice *sdev, uint16_t level)
 {
     struct PinStat pin_stat;
     
-    /* µÍµçÆ½Êä³ö£¬¸ßµçÆ½ÊäÈë */
+    /* ä½ç”µå¹³è¾“å‡ºï¼Œé«˜ç”µå¹³è¾“å…¥ */
     if (DHT22_ConfigPinMode(sdev, GPIO_CFG_OUTPUT) != 0) {
         printf("[ERR] Cannot set output mode before level setting\n");
         return -1;
     }
     
-    /* ÉèÖÃÒı½ÅµçÆ½ */
+    /* è®¾ç½®å¼•è„šç”µå¹³ */
     pin_stat.pin = SENSOR_DEVICE_DHT22_GPIO_PIN;
     pin_stat.val = level;
     
@@ -127,9 +127,9 @@ static int DHT22_SetPinLevel(struct SensorDevice *sdev, uint16_t level)
 }
 
 /**
- * @description: ¶ÁÈ¡GPIOÒı½ÅµçÆ½ - Ê¹ÓÃÕıÈ·µÄstruct PinStat
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
- * @return Òı½ÅµçÆ½Öµ (GPIO_LOW»òGPIO_HIGH, -1±íÊ¾´íÎó)
+ * @description: è¯»å–GPIOå¼•è„šç”µå¹³ - ä½¿ç”¨æ­£ç¡®çš„struct PinStat
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
+ * @return å¼•è„šç”µå¹³å€¼ (GPIO_LOWæˆ–GPIO_HIGH, -1è¡¨ç¤ºé”™è¯¯)
  */
 static int DHT22_ReadPinLevel(struct SensorDevice *sdev)
 {
@@ -137,7 +137,7 @@ static int DHT22_ReadPinLevel(struct SensorDevice *sdev)
     
     pin_stat.pin = SENSOR_DEVICE_DHT22_GPIO_PIN;
 
-    /* Ê¹ÓÃPrivRead¶ÁÈ¡µçÆ½Öµ */
+    /* ä½¿ç”¨PrivReadè¯»å–ç”µå¹³å€¼ */
     if (PrivRead(sdev->fd, &pin_stat, NULL_PARAMETER) < 0) {
         printf("Read GPIO pin %ld level failed\n", pin_stat.pin);
         return -1;
@@ -148,8 +148,8 @@ static int DHT22_ReadPinLevel(struct SensorDevice *sdev)
 }
 
 /**
- * @description: ·¢ËÍDHT22ÆğÊ¼ĞÅºÅ - ÑÏ¸ñ°´ÕÕËµÃ÷ÊéÊ±ĞòÊµÏÖ
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @description: å‘é€DHT22èµ·å§‹ä¿¡å· - ä¸¥æ ¼æŒ‰ç…§è¯´æ˜ä¹¦æ—¶åºå®ç°
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
  * @return success : 0 error : -1
  */
 static int DHT22_SendStartSignal(struct SensorDevice *sdev)
@@ -158,18 +158,18 @@ static int DHT22_SendStartSignal(struct SensorDevice *sdev)
     
     // printf("Starting DHT22 communication on pin %d\n", SENSOR_DEVICE_DHT22_GPIO_PIN);
     
-    /* 1. À­µÍ×ÜÏß500us - ÑÏ¸ñ°´ÕÕËµÃ÷ÊéÊ±ĞòÒªÇó */
+    /* 1. æ‹‰ä½æ€»çº¿500us - ä¸¥æ ¼æŒ‰ç…§è¯´æ˜ä¹¦æ—¶åºè¦æ±‚ */
     ret = DHT22_SetPinLevel(sdev, GPIO_LOW);
     if (ret != 0) {
         printf("DHT22 set pin low failed\n");
         return -1;
     }
 
-    /* ¾«È·µÄ500usÑÓÊ± */
+    /* ç²¾ç¡®çš„500uså»¶æ—¶ */
     DHT22_DelayUs(DHT22_START_SIGNAL_DURATION);
     
     
-    /* 2. ÊÍ·Å×ÜÏß£¨À­¸ß£© */
+    /* 2. é‡Šæ”¾æ€»çº¿ï¼ˆæ‹‰é«˜ï¼‰ */
     ret = DHT22_SetPinLevel(sdev, GPIO_HIGH);
     if (ret != 0) {
         printf("DHT22 set pin high failed\n");
@@ -183,15 +183,15 @@ static int DHT22_SendStartSignal(struct SensorDevice *sdev)
 
     // int testLevel = DHT22_ReadPinLevel(sdev);
     // printf("test level result : %d\n", testLevel);
-    // /* 3. ¶ÌÔİÑÓÊ±ºó¿ªÊ¼¼ì²âÏìÓ¦ */
+    // /* 3. çŸ­æš‚å»¶æ—¶åå¼€å§‹æ£€æµ‹å“åº” */
     DHT22_DelayUs(30);
     
     return 0;
 }
 
 /**
- * @description: µÈ´ıDHT22ÏìÓ¦ĞÅºÅ - ¾«È·Ê±Ğò¿ØÖÆ
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @description: ç­‰å¾…DHT22å“åº”ä¿¡å· - ç²¾ç¡®æ—¶åºæ§åˆ¶
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
  * @return success : 0 error : -1
  */
 static int DHT22_WaitResponse(struct SensorDevice *sdev)
@@ -199,7 +199,7 @@ static int DHT22_WaitResponse(struct SensorDevice *sdev)
     uint32_t timeout = DHT22_RESPONSE_TIMEOUT;
     int pin_val;
     
-    /* µÈ´ıDHT22À­µÍ×ÜÏß£¨80usµÍµçÆ½ÏìÓ¦ĞÅºÅ£© */
+    /* ç­‰å¾…DHT22æ‹‰ä½æ€»çº¿ï¼ˆ80usä½ç”µå¹³å“åº”ä¿¡å·ï¼‰ */
     while (timeout--) {
         pin_val = DHT22_ReadPinLevel(sdev);
         if (pin_val == GPIO_LOW) break;
@@ -214,7 +214,7 @@ static int DHT22_WaitResponse(struct SensorDevice *sdev)
     printf("waitRes test level result : %d , waste time : %d\n", testLevel, 1000-timeout);
 
     timeout = DHT22_RESPONSE_TIMEOUT;
-    /* µÈ´ıDHT22À­¸ß×ÜÏß£¨80us¸ßµçÆ½×¼±¸ĞÅºÅ£© */
+    /* ç­‰å¾…DHT22æ‹‰é«˜æ€»çº¿ï¼ˆ80usé«˜ç”µå¹³å‡†å¤‡ä¿¡å·ï¼‰ */
     while (timeout--) {
         pin_val = DHT22_ReadPinLevel(sdev);
         if (pin_val == GPIO_HIGH) break;
@@ -232,9 +232,9 @@ static int DHT22_WaitResponse(struct SensorDevice *sdev)
 }
 
 /**
- * @description: ¶ÁÈ¡Ò»Î»Êı¾İ - ¾«È·Î»Ê±Ğò½âÎö
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
- * @return Êı¾İÎ»Öµ£¨0»ò1£¬0xFF±íÊ¾´íÎó£©
+ * @description: è¯»å–ä¸€ä½æ•°æ® - ç²¾ç¡®ä½æ—¶åºè§£æ
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
+ * @return æ•°æ®ä½å€¼ï¼ˆ0æˆ–1ï¼Œ0xFFè¡¨ç¤ºé”™è¯¯ï¼‰
  */
 static uint8_t DHT22_ReadBit(struct SensorDevice *sdev)
 {
@@ -242,7 +242,7 @@ static uint8_t DHT22_ReadBit(struct SensorDevice *sdev)
     uint32_t timeout = DHT22_RESPONSE_TIMEOUT;
     int pin_val;
     
-    /* µÈ´ı50usµÍµçÆ½ÆğÊ¼Î» */
+    /* ç­‰å¾…50usä½ç”µå¹³èµ·å§‹ä½ */
     while (timeout--) {
         pin_val = DHT22_ReadPinLevel(sdev);
         if (pin_val == GPIO_LOW) break;
@@ -254,7 +254,7 @@ static uint8_t DHT22_ReadBit(struct SensorDevice *sdev)
         return 0xFF;
     }
     
-    /* ²âÁ¿¸ßµçÆ½³ÖĞøÊ±¼ä */
+    /* æµ‹é‡é«˜ç”µå¹³æŒç»­æ—¶é—´ */
     timeout = DHT22_RESPONSE_TIMEOUT * 2;
     while (timeout--) {
         pin_val = DHT22_ReadPinLevel(sdev);
@@ -267,11 +267,11 @@ static uint8_t DHT22_ReadBit(struct SensorDevice *sdev)
     }
     
     printf("duration: %u\n", high_duration);
-    /* ¸ù¾İ¸ßµçÆ½³ÖĞøÊ±¼äÅĞ¶ÏÊı¾İÎ» - ·ûºÏËµÃ÷ÊéÊ±Ğò¹æ·¶ */
+    /* æ ¹æ®é«˜ç”µå¹³æŒç»­æ—¶é—´åˆ¤æ–­æ•°æ®ä½ - ç¬¦åˆè¯´æ˜ä¹¦æ—¶åºè§„èŒƒ */
     if (high_duration > DHT22_BIT_1_MIN_DURATION) {
-        return 1;  /* ¸ßµçÆ½³ÖĞøÊ±¼ä³¤£¨>70us£©£¬±íÊ¾1 */
+        return 1;  /* é«˜ç”µå¹³æŒç»­æ—¶é—´é•¿ï¼ˆ>70usï¼‰ï¼Œè¡¨ç¤º1 */
     } else if (high_duration > 0) {
-        return 0;  /* ¸ßµçÆ½³ÖĞøÊ±¼ä¶Ì£¨26-28us£©£¬±íÊ¾0 */
+        return 0;  /* é«˜ç”µå¹³æŒç»­æ—¶é—´çŸ­ï¼ˆ26-28usï¼‰ï¼Œè¡¨ç¤º0 */
     }
     
     printf("DHT22 bit read error, duration: %u\n", high_duration);
@@ -279,9 +279,9 @@ static uint8_t DHT22_ReadBit(struct SensorDevice *sdev)
 }
 
 /**
- * @description: ¶ÁÈ¡40Î»Êı¾İ - ÍêÕûÊı¾İÖ¡½ÓÊÕ
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
- * @param data - Êı¾İ´æ´¢»º³åÇø
+ * @description: è¯»å–40ä½æ•°æ® - å®Œæ•´æ•°æ®å¸§æ¥æ”¶
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
+ * @param data - æ•°æ®å­˜å‚¨ç¼“å†²åŒº
  * @return success : 0 error : -1
  */
 static int DHT22_ReadData(struct SensorDevice *sdev, uint8_t *data)
@@ -289,7 +289,7 @@ static int DHT22_ReadData(struct SensorDevice *sdev, uint8_t *data)
     uint8_t i, j;
     uint8_t byte, bit_val;
     
-    /* ¶ÁÈ¡5×Ö½Ú£¨40Î»£©Êı¾İ */
+    /* è¯»å–5å­—èŠ‚ï¼ˆ40ä½ï¼‰æ•°æ® */
     for (i = 0; i < 5; i++) {
         byte = 0;
         for (j = 0; j < 8; j++) {
@@ -308,8 +308,8 @@ static int DHT22_ReadData(struct SensorDevice *sdev, uint8_t *data)
 }
 
 /**
- * @description: Ğ£ÑéÊı¾İÍêÕûĞÔ - 8Î»Ğ£ÑéºÍÑéÖ¤
- * @param data - Êı¾İ»º³åÇø
+ * @description: æ ¡éªŒæ•°æ®å®Œæ•´æ€§ - 8ä½æ ¡éªŒå’ŒéªŒè¯
+ * @param data - æ•°æ®ç¼“å†²åŒº
  * @return success : 0 error : -1
  */
 static int DHT22_CheckData(uint8_t *data)
@@ -324,13 +324,13 @@ static int DHT22_CheckData(uint8_t *data)
 }
 
 /**
- * @description: ¼ì²éDHT22Ó²¼şÁ¬½Ó
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @description: æ£€æŸ¥DHT22ç¡¬ä»¶è¿æ¥
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
  * @return success : 0 error : -1
  */
 static int DHT22_HardwareCheck(struct SensorDevice *sdev)
 {
-    /* ¼ì²éGPIOÉè±¸ÊÇ·ñÕı³£´ò¿ª */
+    /* æ£€æŸ¥GPIOè®¾å¤‡æ˜¯å¦æ­£å¸¸æ‰“å¼€ */
     if (sdev->fd < 0) {
         printf("DHT22 device not properly opened\n");
         return -1;
@@ -338,7 +338,7 @@ static int DHT22_HardwareCheck(struct SensorDevice *sdev)
     
     printf("Testing DHT22 hardware on pin %d...\n", SENSOR_DEVICE_DHT22_GPIO_PIN);
     
-    /* ²âÊÔ¸ßµÍµçÆ½ÉèÖÃ */
+    /* æµ‹è¯•é«˜ä½ç”µå¹³è®¾ç½® */
     int ret = DHT22_SetPinLevel(sdev, GPIO_HIGH);
     if (ret != 0) {
         printf("GPIO pin %d high level test failed\n", SENSOR_DEVICE_DHT22_GPIO_PIN);
@@ -357,8 +357,8 @@ static int DHT22_HardwareCheck(struct SensorDevice *sdev)
 
 
 /**
- * @description: ´ò¿ªDHT22´«¸ĞÆ÷Éè±¸
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @description: æ‰“å¼€DHT22ä¼ æ„Ÿå™¨è®¾å¤‡
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
  * @return success : 0 error : -1
  */
 static int SensorDeviceOpen(struct SensorDevice *sdev)
@@ -371,7 +371,7 @@ static int SensorDeviceOpen(struct SensorDevice *sdev)
     
     // printf("Device %s opened successfully, FD=%d\n", SENSOR_DEVICE_DHT22_DEV, sdev->fd);
     
-    /* ÉÏµçºóµÈ´ı1ÃëÔ½¹ı²»ÎÈ¶¨×´Ì¬ - ·ûºÏËµÃ÷ÊéÒªÇó */
+    /* ä¸Šç”µåç­‰å¾…1ç§’è¶Šè¿‡ä¸ç¨³å®šçŠ¶æ€ - ç¬¦åˆè¯´æ˜ä¹¦è¦æ±‚ */
     printf("DHT22 power on, waiting 1s for stabilization...\n");
     PrivTaskDelay(1000);
     
@@ -380,9 +380,9 @@ static int SensorDeviceOpen(struct SensorDevice *sdev)
 }
 
 /**
- * @description: ¶ÁÈ¡´«¸ĞÆ÷Êı¾İ - ÍêÕûÍ¨ĞÅÁ÷³Ì
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
- * @param len - ¶ÁÈ¡Êı¾İ³¤¶È
+ * @description: è¯»å–ä¼ æ„Ÿå™¨æ•°æ® - å®Œæ•´é€šä¿¡æµç¨‹
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
+ * @param len - è¯»å–æ•°æ®é•¿åº¦
  * @return success: 0 , failure: -1
  */
 static int SensorDeviceRead(struct SensorDevice *sdev, size_t len)
@@ -390,7 +390,7 @@ static int SensorDeviceRead(struct SensorDevice *sdev, size_t len)
     int ret;
     uint8_t data[5] = {0};
     
-    /* Ó²¼şÁ¬½Ó¼ì²é */
+    /* ç¡¬ä»¶è¿æ¥æ£€æŸ¥ */
     // ret = DHT22_HardwareCheck(sdev);
     // if (ret != 0) {
     //     printf("DHT22 hardware check failed\n");
@@ -404,7 +404,7 @@ static int SensorDeviceRead(struct SensorDevice *sdev, size_t len)
         return -1;
     }
     
-    /* ÍêÕûµÄDHT22Í¨ĞÅÁ÷³Ì */
+    /* å®Œæ•´çš„DHT22é€šä¿¡æµç¨‹ */
     ret = DHT22_SendStartSignal(sdev);
     if (ret != 0) {
         printf("DHT22 start signal failed\n");
@@ -429,7 +429,7 @@ static int SensorDeviceRead(struct SensorDevice *sdev, size_t len)
         return -1;
     }
     
-    /* ´æ´¢Êı¾İµ½»º³åÇø */
+    /* å­˜å‚¨æ•°æ®åˆ°ç¼“å†²åŒº */
     if (len >= 5) {
         memcpy(sdev->buffer, data, 5);
     }
@@ -439,8 +439,8 @@ static int SensorDeviceRead(struct SensorDevice *sdev, size_t len)
 }
 
 /**
- * @description: ¹Ø±Õ´«¸ĞÆ÷Éè±¸
- * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @description: å…³é—­ä¼ æ„Ÿå™¨è®¾å¤‡
+ * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
  * @return success: 0
  */
 static int SensorDeviceClose(struct SensorDevice *sdev)
@@ -453,7 +453,7 @@ static int SensorDeviceClose(struct SensorDevice *sdev)
     return 0;
 }
 
-/* ´«¸ĞÆ÷²Ù×÷½Ó¿Ú */
+/* ä¼ æ„Ÿå™¨æ“ä½œæ¥å£ */
 static struct SensorDone done =
 {
     .open = SensorDeviceOpen,
@@ -464,7 +464,7 @@ static struct SensorDone done =
 };
 
 /**
- * @description: ³õÊ¼»¯DHT22´«¸ĞÆ÷²¢×¢²á
+ * @description: åˆå§‹åŒ–DHT22ä¼ æ„Ÿå™¨å¹¶æ³¨å†Œ
  * @return void
  */
 static void SensorDeviceDht22Init(void)
@@ -481,9 +481,9 @@ static void SensorDeviceDht22Init(void)
 static struct SensorQuantity dht22_temperature;
 
 /**
- * @description: ½âÎöDHT22ÎÂ¶ÈÊı¾İ - ÕıÈ·´¦Àí¸ºÎÂ¶È
- * @param quant - ´«¸ĞÆ÷Á¿Ö¸Õë
- * @return ÎÂ¶ÈÖµ£¨À©´ó10±¶£¬µ¥Î»£º0.1¡æ£©
+ * @description: è§£æDHT22æ¸©åº¦æ•°æ® - æ­£ç¡®å¤„ç†è´Ÿæ¸©åº¦
+ * @param quant - ä¼ æ„Ÿå™¨é‡æŒ‡é’ˆ
+ * @return æ¸©åº¦å€¼ï¼ˆæ‰©å¤§10å€ï¼Œå•ä½ï¼š0.1â„ƒï¼‰
  */
 static int32_t ReadTemperature(struct SensorQuantity *quant)
 {
@@ -494,27 +494,27 @@ static int32_t ReadTemperature(struct SensorQuantity *quant)
 
     if (quant->sdev->done->read != NULL) {
         if (quant->sdev->status == SENSOR_DEVICE_PASSIVE) {
-            /* ¶ÁÈ¡´«¸ĞÆ÷Êı¾İ */
+            /* è¯»å–ä¼ æ„Ÿå™¨æ•°æ® */
             if (quant->sdev->done->read(quant->sdev, 5) == 0) {
                 uint16_t temp_raw;
                 float temperature;
                 
-                /* ½âÎöÎÂ¶ÈÊı¾İ£¨16Î»£© */
+                /* è§£ææ¸©åº¦æ•°æ®ï¼ˆ16ä½ï¼‰ */
                 temp_raw = (quant->sdev->buffer[2] << 8) | quant->sdev->buffer[3];
                 
-                /* ¼ì²éÎÂ¶ÈÕı¸º£¨×î¸ßÎ»Îª·ûºÅÎ»£© */
+                /* æ£€æŸ¥æ¸©åº¦æ­£è´Ÿï¼ˆæœ€é«˜ä½ä¸ºç¬¦å·ä½ï¼‰ */
                 if (temp_raw & 0x8000) {
-                    /* ¸ºÎÂ¶È£ºÇå³ı·ûºÅÎ»ºó¼ÆËã */
+                    /* è´Ÿæ¸©åº¦ï¼šæ¸…é™¤ç¬¦å·ä½åè®¡ç®— */
                     temp_raw &= 0x7FFF;
                     temperature = -(float)temp_raw * 0.1;
-                    printf("DHT22 Temperature: -%.1f¡ãC\n", temperature);
+                    printf("DHT22 Temperature: -%.1fÂ°C\n", temperature);
                 } else {
-                    /* ÕıÎÂ¶È */
+                    /* æ­£æ¸©åº¦ */
                     temperature = (float)temp_raw * 0.1;
-                    printf("DHT22 Temperature: %.1f¡ãC\n", temperature);
+                    printf("DHT22 Temperature: %.1fÂ°C\n", temperature);
                 }
                 
-                /* ·µ»ØÀ©´ó10±¶µÄÎÂ¶ÈÖµ£¨µ¥Î»£º0.1¡æ£© */
+                /* è¿”å›æ‰©å¤§10å€çš„æ¸©åº¦å€¼ï¼ˆå•ä½ï¼š0.1â„ƒï¼‰ */
                 return (int32_t)(temperature * 10);
             } else {
                 printf("DHT22 read data failed\n");
@@ -531,7 +531,7 @@ static int32_t ReadTemperature(struct SensorQuantity *quant)
 
 
 /**
- * @description: ³õÊ¼»¯DHT22ÎÂ¶ÈÁ¿²¢×¢²á
+ * @description: åˆå§‹åŒ–DHT22æ¸©åº¦é‡å¹¶æ³¨å†Œ
  * @return 0
  */
 int Dht22TemperatureInit(void)
@@ -541,8 +541,8 @@ int Dht22TemperatureInit(void)
     dht22_temperature.name = SENSOR_QUANTITY_DHT22_TEMPERATURE;
     dht22_temperature.type = SENSOR_QUANTITY_TEMP;
     dht22_temperature.value.decimal_places = 1;
-    dht22_temperature.value.max_std = 800;    /* 80.0¡æ */
-    dht22_temperature.value.min_std = -400;   /* -40.0¡æ */
+    dht22_temperature.value.max_std = 800;    /* 80.0â„ƒ */
+    dht22_temperature.value.min_std = -400;   /* -40.0â„ƒ */
     dht22_temperature.value.last_value = SENSOR_QUANTITY_VALUE_ERROR;
     dht22_temperature.value.max_value = SENSOR_QUANTITY_VALUE_ERROR;
     dht22_temperature.value.min_value = SENSOR_QUANTITY_VALUE_ERROR;

@@ -34,7 +34,16 @@ static const uint8_t parket_heart[] = {0xC0,0x00};                 //客户端�
 static const uint8_t parket_subAck[] = {0x90,0x03,0x00,0x0A,0x01}; //订阅成功服务器回应报文
 static const uint8_t parket_unsubAck[] = {0xB0,0x02,0x00,0x0A};    //取消订阅成功服务器回应报文
 static uint8_t mqtt_rxbuf[16];
+static char server_ip[64];
+static char server_port[16];
 
+void MQTT_SetServer(const char *ip, const char *port)
+{
+    memset(server_ip, 0, sizeof(server_ip));
+    memset(server_port, 0, sizeof(server_port));
+    if (ip) { strncpy(server_ip, ip, sizeof(server_ip) - 1); }
+    if (port) { strncpy(server_port, port, sizeof(server_port) - 1); }
+}
 
 /*******************************************************************************
 * 函 数 名: AdapterNetActive
@@ -46,7 +55,7 @@ int AdapterNetActive(void)
 {
     int ret = 0;
     uint32_t baud_rate = BAUD_RATE_115200;
-    adapter =  AdapterDeviceFindByName(ADAPTER_4G_NAME);
+    adapter =  AdapterDeviceFindByName(ADAPTER_WIFI_NAME);
     adapter->socket.socket_id = 0;
     
     ret = AdapterDeviceOpen(adapter);
@@ -61,7 +70,8 @@ int AdapterNetActive(void)
         goto out;
     }
 
-    ret = AdapterDeviceConnect(adapter, CLIENT, PLATFORM_SERVERIP, PLATFORM_SERVERPORT, IPV4);
+    // 使用动态设置的 MQTT 服务器地址和端口
+    ret = AdapterDeviceConnect(adapter, CLIENT, server_ip, server_port, IPV4);
     if (ret < 0) 
     {
         goto out;

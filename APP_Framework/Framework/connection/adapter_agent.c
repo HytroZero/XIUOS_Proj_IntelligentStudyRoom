@@ -429,10 +429,21 @@ static int GetCompleteATReply(ATAgentType agent)
                     read_len++;
                     agent->maintain_len = read_len;
                 }
-
             } else {
                 printf("maintain_len is_full %d ...\n", read_len);
                 is_full = true;
+            }
+
+            // 新增：当缓冲里包含典型结束关键字时，也认为回复完成（成功或失败）
+            if (agent->maintain_len > 0) {
+                if (strstr(agent->maintain_buffer, "OK") ||
+                    strstr(agent->maintain_buffer, "FAIL") ||
+                    strstr(agent->maintain_buffer, "ERROR")) {
+                    printf("GetCompleteATReply done\n");
+                    agent->receive_mode = DEFAULT_MODE;
+                    PrivMutexAbandon(&agent->lock);
+                    break;
+                }
             }
 
             if (((ch == '\n') && (agent->reply_lr_end)) ||

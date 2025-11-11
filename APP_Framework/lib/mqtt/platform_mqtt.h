@@ -60,4 +60,5 @@ void MQTT_PublishDataQs0(uint8_t *topic_name,uint8_t *data, uint16_t data_len);
 void MQTT_PublishDataQs1(uint8_t *topic_name,uint8_t *data, uint16_t data_len);
 bool MQTT_SendHeart(void);
 uint16_t MQTT_DealPublishData(uint8_t *data, uint16_t data_len);
+void MQTT_SetServer(const char *ip, const char *port);
 #endif

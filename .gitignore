@@ -3,3 +3,5 @@
 *libmusl.a
 *liblwip.a
 .DS_Store
+._.*
+*.idea

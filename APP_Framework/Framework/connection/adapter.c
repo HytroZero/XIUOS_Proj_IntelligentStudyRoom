@@ -915,8 +915,10 @@ int AdapterDeviceNetstat(struct Adapter *adapter)
  */
 int AdapterDeviceMqttConnect(struct Adapter *adapter, const char *ip, const char *port, const char *client_id, const char *username, const char *password)
 {
-    if (!adapter)
+    if (!adapter) {
+        printf("AdapterDeviceMqttConnect adapter is NULL\n");
         return -1;
+    }
         
     if (PRIVATE_PROTOCOL == adapter->net_protocol) {
         printf("AdapterDeviceMqttConnect not suuport private_protocol, please use join\n");

@@ -9,11 +9,9 @@
 * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 * See the Mulan PSL v2 for more details.
 */
-
 #include <stdio.h>
 #include <string.h>
 #include <transform.h>
-
 
 extern int FrameworkInit();
 extern void ApplicationOtaTaskInit(void);
@@ -34,19 +32,20 @@ int main(void)
 #ifdef APPLICATION_WEBSERVER
     webserver();
 #endif
-    // MqttTest();
+    // MqttTest("192.168.76.149", "1883");
     // MonitorSensorTasks();
     // StopSensorTasks();
     // k210_detect("face.json");
 
-    WifiInitAndConnect();
-    MqttTest("192.168.76.149", "1883");
+    WifiInitAndConnect("4001", "nmsmshsa");
+    // MqttTest();
+
     printf("Creating parallel tasks for all...\n");
-    if (CreateAndStartTasks() < 0) {
+    if (CreateAndStartTasks("192.168.5.96", "1883") < 0) {
         printf("Failed to create tasks for all...\n");
         return -1;
     }
     printf("Parallel tasks created and started\n");
+    
     return 0;
 }
-

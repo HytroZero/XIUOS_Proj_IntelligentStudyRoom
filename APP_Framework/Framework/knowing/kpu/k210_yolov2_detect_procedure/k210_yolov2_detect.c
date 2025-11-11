@@ -31,7 +31,7 @@ kpu_model_context_t detect_task;
 static region_layer_t detect_rl;
 static obj_info_t detect_info;
 volatile uint32_t g_ai_done_flag;
-volatile int object_exist_or_not = 0;//people exist or not
+volatile int existing_object_count = 0; // 给normal_app.c使用的全局变量
 
 static void ai_done(void *ctx) { g_ai_done_flag = 1; }
 
@@ -324,7 +324,8 @@ static void *thread_detect_entry(void *parameter)
         region_layer_run(&detect_rl, &detect_info);
         // printf("detect_info.obj_number:%d\n", detect_info.obj_number);
 
-        object_exist_or_not = (detect_info.obj_number == 0) ? 0 : 1;
+        // object_exist_or_not = (detect_info.obj_number == 0) ? 0 : 1;
+        existing_object_count = detect_info.obj_number;
 
         for (int cnt = 0; cnt < detect_info.obj_number; cnt++)
         {
