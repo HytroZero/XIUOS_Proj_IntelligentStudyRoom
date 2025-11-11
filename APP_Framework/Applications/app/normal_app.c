@@ -1,5 +1,94 @@
 #include "normal_app.h"
 
+// 头文件把“运行状态/任务 ID”定义成了静态变量，任何包含该头的源文件都会有各自的副本，容易导致状态不一致。应改为在 .c 中定义、在 .h 中 extern 声明
+static int32_t temperature_task_id = -1;
+static int32_t humidity_task_id = -1;
+static int32_t mqtt_task_id = -1;
+static uint32_t detect_task_id = -1;
+static uint32_t detect_receive_task_id = -1;
+
+static uint8_t temperature_task_run = 1;
+static uint8_t humidity_task_run = 1;
+static uint8_t mqtt_task_run = 1;
+static uint8_t detect_task_run = 1;
+static uint8_t detect_receive_task_run = 1;
+
+static SensorData sensor_data = {0, 0.0f, 0.0f, 0.0f};
+static AdapterType g_mqtt_adapter = NULL;
+
+// static void PrintAdapterInfo(struct Adapter* adapter) 
+// {
+//     if (!adapter) {
+//         printf("[Adapter] NULL pointer\n");
+//         return;
+//     }
+
+//     const char *sock_proto_str = "UNKNOWN";
+//     if (adapter->socket.protocal == SOCKET_PROTOCOL_TCP) sock_proto_str = "TCP";
+//     else if (adapter->socket.protocal == SOCKET_PROTOCOL_UDP) sock_proto_str = "UDP";
+
+//     printf("======== Adapter Dump ========\n");
+//     printf("name: %s\n", adapter->name);
+//     printf("fd: %d\n", adapter->fd);
+//     printf("product_info_flag: %d\n", adapter->product_info_flag);
+
+//     // ATAgent
+//     if (adapter->agent) {
+//         struct ATAgent *ag = adapter->agent;
+//         printf("agent.agent_name: %s\n", ag->agent_name);
+//         printf("agent.fd: %d\n", ag->fd);
+//         printf("agent.read_len: %d\n", ag->read_len);
+//         printf("agent.maintain_buffer: %p\n", ag->maintain_buffer);
+//         printf("agent.maintain_len/max: %u/%u\n", ag->maintain_len, ag->maintain_max);
+//         printf("agent.reply: %p\n", ag->reply);
+//         if (ag->reply) {
+//             printf("  reply.reply_buffer: %p\n", ag->reply->reply_buffer);
+//             printf("  reply.reply_len/max: %u/%u\n", ag->reply->reply_len, ag->reply->reply_max_len);
+//         }
+//         printf("agent.reply_lr_end: %d\n", ag->reply_lr_end);
+//         printf("agent.reply_end_last_char: '%c'\n", ag->reply_end_last_char ? ag->reply_end_last_char : ' ');
+//         printf("agent.reply_end_char: '%c'\n", ag->reply_end_char ? ag->reply_end_char : ' ');
+//         printf("agent.reply_char_num: %u\n", ag->reply_char_num);
+//         printf("agent.at_handler: %p\n", (void*)ag->at_handler);
+//         printf("agent.entm_recv_len: %u\n", ag->entm_recv_len);
+//         printf("agent.receive_mode: %d\n", ag->receive_mode);
+//         printf("agent.entm_rx_notice: %p\n", (void*)&ag->entm_rx_notice);
+//         // 不直接打印 entm_recv_buf 内容（可能包含二进制），仅打印地址
+//         printf("agent.entm_recv_buf: %p\n", (void*)ag->entm_recv_buf);
+//         printf("agent.lock: %p\n", (void*)&ag->lock);
+//         printf("agent.rsp_sem: %p\n", (void*)&ag->rsp_sem);
+//     } else {
+//         printf("agent: NULL\n");
+//     }
+
+//     // Socket
+//     printf("socket.type: %u\n", adapter->socket.type);
+//     printf("socket.protocal: %u (%s)\n", adapter->socket.protocal, sock_proto_str);
+//     printf("socket.listen_port: %u\n", adapter->socket.listen_port);
+//     printf("socket.socket_id: %u\n", adapter->socket.socket_id);
+//     printf("socket.recv_control: %u\n", adapter->socket.recv_control);
+//     printf("socket.af_type: %u\n", adapter->socket.af_type);
+//     printf("socket.src_ip_addr: %s\n", adapter->socket.src_ip_addr ? adapter->socket.src_ip_addr : "(null)");
+//     printf("socket.dst_ip_addr: %s\n", adapter->socket.dst_ip_addr ? adapter->socket.dst_ip_addr : "(null)");
+
+//     // 基本状态
+//     printf("net_role_id: %d\n", adapter->net_role_id);
+//     printf("net_protocol: %d (%s)\n", adapter->net_protocol, proto_str);
+//     printf("net_role: %d (%s)\n", adapter->net_role, role_str);
+//     printf("adapter_status: %d (%s)\n", adapter->adapter_status, status_str);
+
+//     // NetworkInfo
+//     printf("network_info.carrier: %s\n", carrier_str);
+//     printf("network_info.signal_strength: %d\n", adapter->network_info.signal_strength);
+//     printf("network_info.ip_address: %s\n", adapter->network_info.ip_address);
+
+//     // buffer[64] 以十六进制打印
+//     printf("buffer[64] (hex):");
+//     for (int i = 0; i < ADAPTER_BUFFSIZE; ++i) {
+//         printf(" %02X", (unsigned char)adapter->buffer[i]);
+//     }
+//     printf("\n");
+// } 
 
 int WifiInitAndConnect(char* ssid, char* password)
 {
@@ -11,7 +100,9 @@ int WifiInitAndConnect(char* ssid, char* password)
         printf("Wi-Fi adapter not found!\n");
         return -1;
     }
-    
+
+    // PrintAdapterInfo(adapter);
+
     // 2. 打开Wi-Fi设备
     ret = AdapterDeviceOpen(adapter);
     if (ret != 0) {
@@ -19,7 +110,41 @@ int WifiInitAndConnect(char* ssid, char* password)
         return ret;
     }
     printf("Wi-Fi device opened successfully.\n");
-    
+
+    AdapterDeviceDisconnect(adapter, NULL);
+    PrivTaskDelay(3000);
+
+    // PrintAdapterInfo(adapter);
+
+    // ******** reset后需要先断开wifi连接 *********
+    // 在连接前判断是否已连接到 AP 先别急
+    // int already_connected = 0;
+    // if (adapter->agent) {
+    //     ATReplyType reply = CreateATReply(256);
+    //     if (reply) {
+    //         // 查询当前 AP 连接状态
+    //         if (ATOrderSend(adapter->agent, REPLY_TIME_OUT, reply, "AT+CWJAP?\r\n") >= 0) {
+    //             char *text = GetReplyText(reply);
+    //             if (text) {
+    //                 // 典型已连接返回: +CWJAP:"<ssid>",...
+    //                 // 未连接返回: No AP
+    //                 if (strstr(text, "+CWJAP:\"")) {
+    //                     printf("Wi-Fi already connected: %s\n", text);
+    //                     already_connected = 1;
+    //                 } else {
+    //                     already_connected = 0;
+    //                 }
+    //             }
+    //         }
+    //         DeleteATReply(reply);
+    //     }
+    // }
+    // if (already_connected) {
+    //     // 已有连接，跳过 Setup
+    //     printf("Skip Wi-Fi setup; already connected.\n");
+    //     return 0;
+    // }
+
     // 3. 配置Wi-Fi连接参数（使用宏定义）
     static struct WifiParam param;
     memset(&param, 0, sizeof(struct WifiParam));
@@ -38,13 +163,11 @@ int WifiInitAndConnect(char* ssid, char* password)
     ret = AdapterDeviceSetUp(adapter);
     if (ret != 0) {
         printf("Wi-Fi connection failed! Error: %d\n", ret);
-        // 关闭设备以防资源泄漏
         AdapterDeviceClose(adapter);
         return ret;
     }
-    
     printf("Wi-Fi connected successfully to: %s\n", ssid);
-    
+
     return ret;
 }
 
@@ -105,7 +228,7 @@ void HumidityTask(void *parameter)
         UserTaskDelay(3000);
         cycle_count++;
     }
-    //SensorQuantityClose(humi);
+    // SensorQuantityClose(humi);
     // printf(" Humidity task completed after %d cycles\n", cycle_count);
     // UserTaskQuit(); 
 }
@@ -124,7 +247,8 @@ void DetectTask(void *parameter)
  * @description: 用来接收k210人脸识别任务函数运行时产生的结果 object_exist_or_not
  * @param parameter - 任务参数
  */
-void DetectReceiveTask(void *parameter) {
+void DetectReceiveTask(void *parameter)
+{
     printf(" Receive detect task started (ID: %d)\n", UserGetTaskID());
     int cycle_count = 0;
     while (detect_task_run) {
@@ -176,7 +300,7 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
     humidity_task_id = UserTaskCreate(humi_task);
     if (humidity_task_id < 0) {
         printf(" Failed to create humidity task\n");
-        UserTaskDelete(humidity_task_id);
+        // UserTaskDelete(humidity_task_id); // 创建任务失败时调用了 删除无效的任务 ID（负值），这会引入错误路径。
         return -1;
     }
     
@@ -190,7 +314,7 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
     mqtt_task_id = UserTaskCreate(mqtt_task);
     if (mqtt_task_id < 0) {
         printf("Failed to create MQTT edge device task\n");
-		UserTaskDelete(mqtt_task_id);
+		// UserTaskDelete(mqtt_task_id);
         return -1;
     } else {
         printf("MQTT edge device task created successfully, ID: %d\n", mqtt_task_id);
@@ -206,7 +330,7 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
     detect_task_id = UserTaskCreate(detect_task);
     if (detect_task_id < 0) {
         printf(" Failed to create detect task\n");
-		UserTaskDelete(detect_task_id);
+		// UserTaskDelete(detect_task_id);
         return -1;
     } else {
         printf("detect task created successfully, ID: %d\n", detect_task_id);
@@ -222,7 +346,7 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
     detect_receive_task_id = UserTaskCreate(detect_receive_task);
     if (detect_receive_task_id < 0) {
         printf(" Failed to create detect_receive task\n");
-		UserTaskDelete(detect_receive_task_id);
+		// UserTaskDelete(detect_receive_task_id);
         return -1;
     } else {
         printf("detect_receive task created successfully, ID: %d\n", detect_receive_task_id);
@@ -329,14 +453,12 @@ void MonitorSensorTasks(void)
         printf("Temperature Task: ID=%d, Name=%s, State=%d\n", 
                temperature_task_id, temp_name, temp_stat);
         printf("Humidity Task: ID=%d, Name=%s, State=%d\n", 
-               humidity_task_id, humi_name, humi_stat);
-        
-        UserTaskDelay(5000);  /* 每5秒监控一次 */
+               humidity_task_id, humi_name, humi_stat);   
+
+        UserTaskDelay(3000);  /* 每3秒监控一次 */
         monitor_count++;
     }
 }
-
-static AdapterType g_mqtt_adapter = NULL;
 
 void MqttEdgeDeviceTask(MqttServerAddr* mqtt_server_addr)
 {
@@ -551,6 +673,15 @@ int CheckMqttConnection(void)
  */
 SensorData GetSensorDataFromQueue(void)
 {
+    
+    sensor_data.person_present = CheckPersonPresence();    // 检查是否有人
+    sensor_data.light_intensity = GetLightIntensity();     // 获取光照强度
+    sensor_data.temperature = GetTemperature();            // 获取温度
+    sensor_data.humidity = GetHumidity();                  // 获取湿度
+    
+    return sensor_data;
+
+    // 这里模拟从消息队列获取数据
 	static uint32_t call_count = 0;
     static uint8_t scenario_index = 0;
     
@@ -624,16 +755,6 @@ SensorData GetSensorDataFromQueue(void)
              data.temperature, data.humidity);
     
     return data;
-    // SensorData data = {0};
-    
-    // // 这里模拟从消息队列获取数据
-    // // 实际应用中应该从真正的消息队列读取
-    // data.person_present = CheckPersonPresence();    // 检查是否有人
-    // data.light_intensity = GetLightIntensity();     // 获取光照强度
-    // data.temperature = GetTemperature();            // 获取温度
-    // data.humidity = GetHumidity();                  // 获取湿度
-    
-    // return data;
 }
 
 /**
@@ -752,6 +873,8 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
  */
 uint8_t CheckPersonPresence(void)
 {
+    return sensor_data.person_present;
+
     // 简单实现：模拟随机的人员检测
     // 在实际应用中，这里应该读取红外传感器或摄像头数据
     static unsigned int call_count = 0;
@@ -767,6 +890,8 @@ uint8_t CheckPersonPresence(void)
  */
 float GetLightIntensity(void)
 {
+    return sensor_data.light_intensity;
+
     // 简单实现：模拟光照强度读数
     // 在实际应用中，这里应该读取光照传感器数据
     static unsigned int call_count = 0;
@@ -784,6 +909,8 @@ float GetLightIntensity(void)
  */
 float GetTemperature(void)
 {
+    return sensor_data.temperature;
+
     // 简单实现：模拟温度读数
     // 在实际应用中，这里应该读取温度传感器数据
     static unsigned int call_count = 0;
@@ -801,6 +928,8 @@ float GetTemperature(void)
  */
 float GetHumidity(void)
 {
+    return sensor_data.humidity;
+
     // 简单实现：模拟湿度读数
     // 在实际应用中，这里应该读取湿度传感器数据
     static unsigned int call_count = 0;
