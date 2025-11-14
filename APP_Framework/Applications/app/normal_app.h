@@ -10,11 +10,12 @@
 #define lw_print printf
 
 /* 任务配置参数 */
-#define MQTT_TASK_PRIORITY    20
+#define MQTT_TASK_PRIORITY    15
 #define TEMPERATURE_TASK_PRIORITY    20
-#define HUMIDITY_TASK_PRIORITY       20
-#define DETECT_TASK_PRIORITY       20
-#define DETECT_RECEIVE_TASK_PRIORITY       20
+#define HUMIDITY_TASK_PRIORITY       19
+#define LIGHT_TASK_PRIORITY       18
+#define DETECT_TASK_PRIORITY       17
+#define DETECT_RECEIVE_TASK_PRIORITY       16
 #define SENSOR_TASK_STACK_SIZE      2048
 #define MQTT_TASK_STACK_SIZE      4096
 #define DETECT_TASK_STACK_SIZE      409600
@@ -51,14 +52,15 @@ typedef struct {
 // 需要的辅助函数声明
 typedef struct {
     uint8_t person_present;
-    float light_intensity;
-    float temperature;
-    float humidity;
+    uint8_t light_intensity;
+    uint8_t temperature;
+    uint8_t humidity;
 } SensorData;
 
 
 void TemperatureTask(void *parameter);
 void HumidityTask(void *parameter);
+void LightTask(void *parameter);
 void MqttEdgeDeviceTask(MqttServerAddr* mqtt_server_addr);
 void DetectTask(void *parameter);
 void DetectReceivetTask(void *parameter);

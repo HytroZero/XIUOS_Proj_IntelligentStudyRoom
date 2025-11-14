@@ -2,6 +2,7 @@
 
 #define SHT20_CMD_SOFT_RESET          0xFE
 #define SHT20_CMD_TEMP_HOLD           0xE3
+#define SHT20_CMD_TEMP_NOHOLD         0xF3
 
 static struct SensorDevice sht20;
 
@@ -12,11 +13,11 @@ static struct SensorProductInfo info = {
 };
 
 /**
- * @description: æ‰“å¼€SHT20ä¼ æ„Ÿå™¨è®¾å¤‡
- * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
- * @return æˆåŠŸ: 0 é”™è¯¯: -1
+ * @description: ´ò¿ªSHT20´«¸ĞÆ÷Éè±¸
+ * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @return ³É¹¦: 0 ´íÎó: -1
  */
-static int SensorDeviceOpen(struct SensorDevice *sdev) {
+static int SensorDeviceOpen(struct SensorDevice *sdev) {    //Í¬Ê±Ö»ÄÜ´ò¿ªÒ»¸ö´«¸ĞÆ÷Éè±¸£¬ËùÒÔ²¢ĞĞÊ¹ÓÃ´«¸ĞÆ÷ĞèÒªÏÈcloseÆäËûµÄ
     int result;
     uint16_t i2c_dev_addr = SENSOR_DEVICE_SHT20_I2C_ADDR;
     
@@ -35,10 +36,10 @@ static int SensorDeviceOpen(struct SensorDevice *sdev) {
 }
 
 /**
- * @description: è¯»å–ä¼ æ„Ÿå™¨æ•°æ®
- * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
- * @param len - è¯»å–æ•°æ®é•¿åº¦
- * @return æˆåŠŸ: 0, å¤±è´¥: -1
+ * @description: ¶ÁÈ¡´«¸ĞÆ÷Êı¾İ
+ * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @param len - ¶ÁÈ¡Êı¾İ³¤¶È
+ * @return ³É¹¦: 0, Ê§°Ü: -1
  */
 static int SensorDeviceRead(struct SensorDevice *sdev, size_t len) {
     if (PrivRead(sdev->fd, sdev->buffer, len) < 0)
@@ -47,11 +48,11 @@ static int SensorDeviceRead(struct SensorDevice *sdev, size_t len) {
 }
 
 /**
- * @description: å†™å…¥ä¼ æ„Ÿå™¨å‘½ä»¤
- * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
- * @param buf - å†™å…¥æ•°æ®ç¼“å†²åŒº
- * @param len - å†™å…¥æ•°æ®é•¿åº¦
- * @return æˆåŠŸ: 0, å¤±è´¥: -1
+ * @description: Ğ´Èë´«¸ĞÆ÷ÃüÁî
+ * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @param buf - Ğ´ÈëÊı¾İ»º³åÇø
+ * @param len - Ğ´ÈëÊı¾İ³¤¶È
+ * @return ³É¹¦: 0, Ê§°Ü: -1
  */
 static int SensorDeviceWrite(struct SensorDevice *sdev, const void *buf, size_t len) {
     if (PrivWrite(sdev->fd, buf, len) < 0)
@@ -60,9 +61,9 @@ static int SensorDeviceWrite(struct SensorDevice *sdev, const void *buf, size_t 
 }
 
 /**
- * @description: è½¯å¤ä½SHT20ä¼ æ„Ÿå™¨
- * @param sdev - ä¼ æ„Ÿå™¨è®¾å¤‡æŒ‡é’ˆ
- * @return æˆåŠŸ: 0, å¤±è´¥: -1
+ * @description: Èí¸´Î»SHT20´«¸ĞÆ÷
+ * @param sdev - ´«¸ĞÆ÷Éè±¸Ö¸Õë
+ * @return ³É¹¦: 0, Ê§°Ü: -1
  */
 // static int SensorDeviceReset(struct SensorDevice *sdev) {
 //     uint8_t reset_cmd = SHT20_CMD_SOFT_RESET;
@@ -70,7 +71,7 @@ static int SensorDeviceWrite(struct SensorDevice *sdev, const void *buf, size_t 
 //     if (sdev->done->write(sdev, &reset_cmd, 1) < 0)
 //         return -1;
     
-//     PrivTaskDelay(15); // ç­‰å¾…å¤ä½å®Œæˆ
+//     PrivTaskDelay(15); // µÈ´ı¸´Î»Íê³É
 //     return 0;
 // }
 
@@ -83,7 +84,7 @@ static struct SensorDone done = {
 };
 
 /**
- * @description: åˆå§‹åŒ–SHT20ä¼ æ„Ÿå™¨å¹¶æ³¨å†Œ
+ * @description: ³õÊ¼»¯SHT20´«¸ĞÆ÷²¢×¢²á
  */
 static void SensorDeviceSht20Init(void) {
     sht20.name = SENSOR_DEVICE_SHT20;
@@ -97,52 +98,52 @@ static void SensorDeviceSht20Init(void) {
 static struct SensorQuantity sht20_temperature;
 
 /**
- * @description: æ¸©åº¦ä¿¡å·è½¬æ¢ä¸ºå®é™…æ¸©åº¦å€¼
- * @param raw_data - åŸå§‹æ¸©åº¦æ•°æ®
- * @return æ¸©åº¦å€¼(Â°C Ã— 10)
+ * @description: ÎÂ¶ÈĞÅºÅ×ª»»ÎªÊµ¼ÊÎÂ¶ÈÖµ
+ * @param raw_data - Ô­Ê¼ÎÂ¶ÈÊı¾İ
+ * @return ÎÂ¶ÈÖµ(¡ãC ¡Á 10)
  */
 static float Sht20ConvertTemperature(uint16_t raw_data) {
-    // æ¸…é™¤çŠ¶æ€ä½(æœ€åä¸¤ä½)
+    // Çå³ı×´Ì¬Î»(×îºóÁ½Î»)
     raw_data &= 0xFFFC;
     
-    // æ ¹æ®æ•°æ®æ‰‹å†Œå…¬å¼è½¬æ¢: T = -46.85 + 175.72 Ã— S_T / 2^16
+    // ¸ù¾İÊı¾İÊÖ²á¹«Ê½×ª»»: T = -46.85 + 175.72 ¡Á S_T / 2^16
     float temperature = -46.85 + 175.72 * (raw_data / 65536.0);
     
     return temperature;
 }
 
 /**
- * @description: è¯»å–SHT20æ¸©åº¦å€¼
- * @param quant - ä¼ æ„Ÿå™¨é‡æŒ‡é’ˆ
- * @return æ¸©åº¦å€¼(Â°C Ã— 10)
+ * @description: ¶ÁÈ¡SHT20ÎÂ¶ÈÖµ
+ * @param quant - ´«¸ĞÆ÷Á¿Ö¸Õë
+ * @return ÎÂ¶ÈÖµ(¡ãC ¡Á 10)
  */
 static int32_t ReadTemperature(struct SensorQuantity *quant) {
     if (!quant)
         return -1;
 
-    uint8_t temp_cmd = SHT20_CMD_TEMP_HOLD;
+    uint8_t temp_cmd = SHT20_CMD_TEMP_NOHOLD;
     float result;
     
     if (quant->sdev->done->read != NULL && quant->sdev->done->write != NULL) {
         if (quant->sdev->status == SENSOR_DEVICE_PASSIVE) {
-            // å‘é€æ¸©åº¦æµ‹é‡å‘½ä»¤
+            // ·¢ËÍÎÂ¶È²âÁ¿ÃüÁî
             if (quant->sdev->done->write(quant->sdev, &temp_cmd, 1) < 0) {
                 printf("Send temperature command failed\n");
                 return -1;
             }
             
-            // ç­‰å¾…æµ‹é‡å®Œæˆ(æœ€å¤§66ms)
+            // µÈ´ı²âÁ¿Íê³É(×î´ó66ms)
             PrivTaskDelay(70);
             
-            // è¯»å–3å­—èŠ‚æ•°æ®(2å­—èŠ‚æ•°æ® + 1å­—èŠ‚CRC)
+            // ¶ÁÈ¡3×Ö½ÚÊı¾İ(2×Ö½ÚÊı¾İ + 1×Ö½ÚCRC)
             if (quant->sdev->done->read(quant->sdev, 3) == 0) {
-                // ç»„åˆæ¸©åº¦æ•°æ®
+                // ×éºÏÎÂ¶ÈÊı¾İ
                 uint16_t raw_temp = (quant->sdev->buffer[0] << 8) | quant->sdev->buffer[1];
                 
-                // è½¬æ¢æ¸©åº¦å€¼
+                // ×ª»»ÎÂ¶ÈÖµ
                 result = Sht20ConvertTemperature(raw_temp);
                 
-                // è¿”å›æ¸©åº¦å€¼(æ”¾å¤§10å€)
+                // ·µ»ØÎÂ¶ÈÖµ(·Å´ó10±¶)
                 return (int32_t)(result * 10);
             }
         } else {
@@ -157,7 +158,7 @@ static int32_t ReadTemperature(struct SensorQuantity *quant) {
 
 
 /**
- * @description: åˆå§‹åŒ–SHT20æ¸©åº¦é‡ç¨‹å¹¶æ³¨å†Œ
+ * @description: ³õÊ¼»¯SHT20ÎÂ¶ÈÁ¿³Ì²¢×¢²á
  * @return 0
  */
 int Sht20TemperatureInit(void) {
@@ -166,8 +167,8 @@ int Sht20TemperatureInit(void) {
     sht20_temperature.name = SENSOR_QUANTITY_SHT20_TEMPERATURE;
     sht20_temperature.type = SENSOR_QUANTITY_TEMP;
     sht20_temperature.value.decimal_places = 1;
-    sht20_temperature.value.max_std = 850;   // -40Â°C to +125Â°C
-    sht20_temperature.value.min_std = -400;  // -40.0Â°C
+    sht20_temperature.value.max_std = 850;   // -40¡ãC to +125¡ãC
+    sht20_temperature.value.min_std = -400;  // -40.0¡ãC
     sht20_temperature.value.last_value = SENSOR_QUANTITY_VALUE_ERROR;
     sht20_temperature.value.max_value = SENSOR_QUANTITY_VALUE_ERROR;
     sht20_temperature.value.min_value = SENSOR_QUANTITY_VALUE_ERROR;

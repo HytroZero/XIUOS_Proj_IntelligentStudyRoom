@@ -1,0 +1,10 @@
+from building import *
+import os
+
+cwd = GetCurrentDir()
+src = []
+if GetDepend(['SENSOR_BH1750_LIGHT']):
+    src += ['bh1750_light.c']
+group = DefineGroup('sensor light bh1750', src, depend = [], CPPPATH = [cwd])
+
+Return('group')

@@ -4,11 +4,13 @@
 static int32_t temperature_task_id = -1;
 static int32_t humidity_task_id = -1;
 static int32_t mqtt_task_id = -1;
+static int32_t light_task_id = -1;
 static uint32_t detect_task_id = -1;
 static uint32_t detect_receive_task_id = -1;
 
 static uint8_t temperature_task_run = 1;
 static uint8_t humidity_task_run = 1;
+static uint8_t light_task_run = 1;
 static uint8_t mqtt_task_run = 1;
 static uint8_t detect_task_run = 1;
 static uint8_t detect_receive_task_run = 1;
@@ -180,24 +182,25 @@ void TemperatureTask(void *parameter)
     printf(" Temperature sensor task started (ID: %d)\n", UserGetTaskID());
     int32_t temperature;
     int cycle_count = 0;
-    struct SensorQuantity* temp = GetTempQuantity();
     while (temperature_task_run /* && cycle_count < SENSOR_RUN_CYCLES*/) {  // 死循环
         printf("\n=== Temperature Measurement Cycle %d ===\n", cycle_count + 1);
         
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
+            struct SensorQuantity* temp = GetTempQuantity();
             temperature = SensorQuantityReadValue(temp);
+            SensorQuantityClose(temp);
             SensorUnlock();
             if (temperature > 0) {
                 printf("Temperature : %d.%d C\n", temperature/10, temperature%10);
                 sensor_data.temperature = temperature/10.0f;
             }
             else {
-                printf("Temperature : %d.%d C\n", -temperature/10, temperature%10);
+                printf("Temperature : %d.%d C\n", -temperature/10, -temperature%10);
                 sensor_data.temperature = -temperature/10.0f;
             }
         }
-        /* 任务延迟5秒 */
-        UserTaskDelay(3000);
+        /* 任务延迟3秒 */
+        UserTaskDelay(2000);
         cycle_count++;
     }
     // SensorQuantityClose(temp);
@@ -215,22 +218,55 @@ void HumidityTask(void *parameter)
     
     int cycle_count = 0;
     int32_t humidity;
-    struct SensorQuantity *humi = GetHumiQuantity();
     while (humidity_task_run /*  && cycle_count < SENSOR_RUN_CYCLES */ ) { // 死循环
         printf("\n=== Humidity Measurement Cycle %d ===\n", cycle_count + 1);
         if (SensorLock(LOCK_TIMEOUT_MS) == 0){
+            struct SensorQuantity *humi = GetHumiQuantity();
             humidity = SensorQuantityReadValue(humi);
+            SensorQuantityClose(humi);
             SensorUnlock();
             printf("Humidity : %d.%d %%RH\n", humidity/10, humidity%10);
             sensor_data.humidity = humidity/10.0f;
         }
-        
-        UserTaskDelay(3000);
+        UserTaskDelay(2000);
         cycle_count++;
     }
     // SensorQuantityClose(humi);
     // printf(" Humidity task completed after %d cycles\n", cycle_count);
     // UserTaskQuit(); 
+}
+
+void LightTask(void *parameter)
+{
+    printf(" Light sensor task started (ID: %d)\n", UserGetTaskID());
+    int32_t light_intensity;
+    int cycle_count = 0;
+    
+    while (light_task_run /* && cycle_count < SENSOR_RUN_CYCLES*/) {  // 死循环
+        printf("\n=== Light Measurement Cycle %d ===\n", cycle_count + 1);
+        
+        if (SensorLock(LOCK_TIMEOUT_MS) == 0){
+            struct SensorQuantity* light = GetLightQuantity();
+            light_intensity = SensorQuantityReadValue(light);
+            SensorQuantityClose(light);
+            SensorUnlock();
+            
+            if (light_intensity >= 0) {
+                printf("Light Intensity : %d.%d lx\n", light_intensity/10, light_intensity%10);
+                sensor_data.light_intensity = light_intensity/10.0f;
+            }
+            else {
+                printf("Light sensor read failed: %d\n", light_intensity);
+                sensor_data.light_intensity = -1.0f;  // 错误值标记
+            }
+        }
+        /* 任务延迟3秒 */
+        UserTaskDelay(2000);
+        cycle_count++;
+    }
+    // SensorQuantityClose(light);
+    // printf(" Light task completed after %d cycles\n", cycle_count);
+    // UserTaskQuit();
 }
 
 /**
@@ -273,7 +309,7 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
     mqtt_server_addr.port[sizeof(mqtt_server_addr.port) - 1] = '\0';
     printf("MQTT server address: %s:%s\n", mqtt_server_addr.ipv4, mqtt_server_addr.port);
 
-    UtaskType temp_task, humi_task, mqtt_task, detect_task, detect_receive_task;
+    UtaskType temp_task, humi_task, mqtt_task, detect_task, detect_receive_task, light_task;
 
     printf(" Initializing sensor tasks...\n");
     SensorMutexInit();
@@ -287,6 +323,19 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
     temperature_task_id = UserTaskCreate(temp_task);
     if (temperature_task_id < 0) {
         printf(" Failed to create temperature task\n");
+        return -1;
+    }
+
+    /* 创建光照传感器任务 */
+    strncpy(light_task.name, "light_task", NAME_NUM_MAX - 1);
+    light_task.func_entry = (void *)LightTask;
+    light_task.func_param = (void *)&light_task_run;
+    light_task.stack_size = SENSOR_TASK_STACK_SIZE;
+    light_task.prio = LIGHT_TASK_PRIORITY;
+    
+    light_task_id = UserTaskCreate(light_task);
+    if (light_task_id < 0) {
+        printf(" Failed to create light task\n");
         return -1;
     }
     
@@ -354,39 +403,46 @@ int CreateAndStartTasks(char* mqtt_ipv4, char* mqtt_port)
 
     // /* 启动任务 */
 
-    UserTaskDelay(100);
-    if (UserTaskStartup(detect_task_id) != EOK) {
-        printf(" Failed to start detect task\n");
-        UserTaskDelete(detect_task_id);
-        return -1;
-    }
 
-    UserTaskDelay(5000); // 长一点
-    if (UserTaskStartup(detect_receive_task_id) != EOK) {
-        printf(" Failed to start detect_receive task\n");
-        UserTaskDelete(detect_receive_task_id);
-        return -1;
-    }
-
-    // if (UserTaskStartup(temperature_task_id) != EOK) {
-    //     printf(" Failed to start temperature task\n");
-	// 	   UserTaskDelete(temperature_task_id);
+    // UserTaskDelay(100);
+    // if (UserTaskStartup(detect_task_id) != EOK) {
+    //     printf(" Failed to start detect task\n");
+    //     UserTaskDelete(detect_task_id);
     //     return -1;
     // }
+
+    // UserTaskDelay(5000); // 长一点
+    // if (UserTaskStartup(detect_receive_task_id) != EOK) {
+    //     printf(" Failed to start detect_receive task\n");
+    //     UserTaskDelete(detect_receive_task_id);
+    //     return -1;
+    // }
+    UserTaskDelay(500);
+    if (UserTaskStartup(temperature_task_id) != EOK) {
+        printf(" Failed to start temperature task\n");
+		   UserTaskDelete(temperature_task_id);
+        return -1;
+    }
     
-    // UserTaskDelay(500);
-    // if (UserTaskStartup(humidity_task_id) != EOK) {
-    //     printf(" Failed to start humidity task\n");
-    //     UserTaskDelete(humidity_task_id);
-    //     return -1;
-    // }
-
-	UserTaskDelay(100);
-    if (UserTaskStartup(mqtt_task_id) != EOK) {
-        printf(" Failed to start mqtt task\n");
-        UserTaskDelete(mqtt_task_id);
+    UserTaskDelay(500);
+    if (UserTaskStartup(humidity_task_id) != EOK) {
+        printf(" Failed to start humidity task\n");
+        UserTaskDelete(humidity_task_id);
         return -1;
     }
+
+    UserTaskDelay(500);
+    if (UserTaskStartup(light_task_id) != EOK) {
+        printf(" Failed to start light task\n");
+        UserTaskDelete(light_task_id);
+        return -1;
+    }
+	// UserTaskDelay(100);
+    // if (UserTaskStartup(mqtt_task_id) != EOK) {
+    //     printf(" Failed to start mqtt task\n");
+    //     UserTaskDelete(mqtt_task_id);
+    //     return -1;
+    // }
 
 
     printf(" tasks created successfully:\n");

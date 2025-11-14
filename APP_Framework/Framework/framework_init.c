@@ -45,6 +45,7 @@ extern int HcSr501Init(void);
 extern int Dht22TemperatureInit(void);
 extern int Sht20TemperatureInit(void);
 extern int Sht20HumidityInit(void);
+extern int Bh1750LightInit(void);
 
 extern int lv_port_init(void);
 
@@ -117,6 +118,12 @@ static struct InitDesc sensor_desc[] =
 #ifdef SENSOR_DEVICE_DHT22
 #ifdef SENSOR_QUANTITY_DHT22_TEMPERATURE
 	{ "dht22_temperature", Dht22TemperatureInit },
+#endif
+#endif
+
+#ifdef SENSOR_DEVICE_BH1750
+#ifdef SENSOR_QUANTITY_BH1750_LIGHT
+	{ "bh1750_light",  Bh1750LightInit },
 #endif
 #endif
 

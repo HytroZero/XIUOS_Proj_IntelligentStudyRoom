@@ -1,0 +1,6 @@
+############################################################################
+# APP_Framework/Framework/sensor/light/bh1750_light/Make.defs
+############################################################################
+ifneq ($(CONFIG_SENSOR_BH1750_LIGHT),)
+CONFIGURED_APPS += $(APPDIR)/../../../APP_Framework/Framework/sensor/light/bh1750_light
+endif

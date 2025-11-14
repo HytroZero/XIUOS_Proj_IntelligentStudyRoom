@@ -47,6 +47,10 @@ ifeq ($(CONFIG_ADD_XIZI_FEATURES),y)
         SRC_DIR += temperature
     endif
 
+    ifeq ($(CONFIG_SENSOR_LIGHT),y)
+        SRC_DIR += light
+    endif
+
     ifeq ($(CONFIG_SENSOR_HUMIDITY),y)
         SRC_DIR += humidity
     endif

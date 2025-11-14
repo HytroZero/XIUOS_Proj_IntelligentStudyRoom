@@ -1,0 +1,25 @@
+
+config SENSOR_BH1750_LIGHT
+        bool "Using BH1750 for light"
+        default y
+
+        if SENSOR_BH1750_LIGHT
+                config SENSOR_DEVICE_BH1750
+                        string "BH1750 sensor name"
+                        default "bh1750_1"
+                
+                config SENSOR_QUANTITY_BH1750_LIGHT
+                        string "BH1750 quantity name"
+                        default "light_1"
+                
+                if ADD_XIZI_FEATURES
+                        config SENSOR_DEVICE_BH1750_DEV
+                                string "BH1750 device name"
+                                default "/dev/i2c1_dev0"
+                                
+                        config SENSOR_DEVICE_BH1750_I2C_ADDR
+                                hex "BH1750 device i2c address"
+                                default 0x23
+                endif
+
+        endif

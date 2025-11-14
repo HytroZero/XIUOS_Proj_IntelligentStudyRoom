@@ -20,6 +20,7 @@
 #include <sensor.h>
 
 #define SHT20_CMD_HUMI_HOLD           0xE5
+#define SHT20_CMD_HUMI_NOHOLD         0xF5
 
 static struct SensorDevice sht20;
 
@@ -127,7 +128,7 @@ static int32_t ReadHumidity(struct SensorQuantity *quant) {
     if (!quant)
         return -1;
 
-    uint8_t humi_cmd = SHT20_CMD_HUMI_HOLD;
+    uint8_t humi_cmd = SHT20_CMD_HUMI_NOHOLD;
     float result;
     
     if (quant->sdev->done->read != NULL && quant->sdev->done->write != NULL) {

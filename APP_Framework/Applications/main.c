@@ -15,7 +15,6 @@
 
 extern int FrameworkInit();
 extern void ApplicationOtaTaskInit(void);
-extern void k210_detect(char *json_file_path);
 
 int main(void)
 {
@@ -37,11 +36,11 @@ int main(void)
     // StopSensorTasks();
     // k210_detect("face.json");
 
-    WifiInitAndConnect("4001", "nmsmshsa");
+    // WifiInitAndConnect("Factory", "00000000");
     // MqttTest();
 
     printf("Creating parallel tasks for all...\n");
-    if (CreateAndStartTasks("192.168.5.96", "1883") < 0) {
+    if (CreateAndStartTasks("10.220.116.149", "1883") < 0) {
         printf("Failed to create tasks for all...\n");
         return -1;
     }

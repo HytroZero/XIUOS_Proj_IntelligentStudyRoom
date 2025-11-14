@@ -60,6 +60,13 @@ if SUPPORT_SENSOR_FRAMEWORK
         source "$APP_DIR/Framework/sensor/temperature/Kconfig"
         endif
 
+        menuconfig SENSOR_LIGHT
+                bool "Using light sensor device"
+                default y
+        if SENSOR_LIGHT
+        source "$APP_DIR/Framework/sensor/light/Kconfig"
+        endif
+
         menuconfig SENSOR_HUMIDITY
                 bool "Using humidity sensor device"
                 default y

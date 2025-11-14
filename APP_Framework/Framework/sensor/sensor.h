@@ -47,6 +47,7 @@ extern "C" {
 #define SENSOR_ABILITY_MOTION           ((uint32_t)(1 << SENSOR_QUANTITY_MOTION))  //红外判断运动状态
 #define SENSOR_ABILITY_CO2              ((uint32_t)(1 << SENSOR_QUANTITY_CO2))
 #define SENSOR_ABILITY_TEMP             ((uint32_t)(1 << SENSOR_QUANTITY_TEMP))
+#define SENSOR_ABILITY_LIGHT            ((uint32_t)(1 << SENSOR_QUANTITY_LIGHT))
 #define SENSOR_ABILITY_HUMI             ((uint32_t)(1 << SENSOR_QUANTITY_HUMI))
 #define SENSOR_ABILITY_HCHO             ((uint32_t)(1 << SENSOR_QUANTITY_HCHO))
 #define SENSOR_ABILITY_CO               ((uint32_t)(1 << SENSOR_QUANTITY_CO))
@@ -102,6 +103,7 @@ struct SensorDevice {
 enum SensorQuantityType {
     SENSOR_QUANTITY_CO2 = 0,
     SENSOR_QUANTITY_TEMP,
+    SENSOR_QUANTITY_LIGHT,
     SENSOR_QUANTITY_HUMI,
     SENSOR_QUANTITY_HCHO,
     SENSOR_QUANTITY_CO,

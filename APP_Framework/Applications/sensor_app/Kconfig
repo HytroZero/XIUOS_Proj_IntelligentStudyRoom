@@ -127,6 +127,20 @@ menu "sensor app"
                     config APPLICATION_SENSOR_TEMPERATURE_SHT20
                     bool "Using sensor SHT20 apps"
                     default y
+
+                    if ADD_NUTTX_FEATURES
+                    endif
+                endif
+
+
+            menuconfig APPLICATION_SENSOR_LIGHT
+                bool "Using sensor light apps"
+                default y
+
+                if APPLICATION_SENSOR_LIGHT
+                    config APPLICATION_SENSOR_LIGHT_BH1750
+                    bool "Using sensor BH1750 apps"
+                    default y
                     
                     if ADD_NUTTX_FEATURES
                     endif
