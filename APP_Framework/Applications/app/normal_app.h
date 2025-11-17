@@ -86,6 +86,24 @@ static char mqtt_iot_netmask[] = {255, 255, 255, 0};
 static char mqtt_iot_gwaddr[] = {192, 168, 76, 136};
 static char mqtt_socket_port_iot[] = "1883";
 static char mqtt_ip_str_iot[] = "192.168.76.149";
+
+// 头文件把“运行状态/任务 ID”定义成了静态变量，任何包含该头的源文件都会有各自的副本，容易导致状态不一致。应改为在 .c 中定义、在 .h 中 extern 声明
+static int32_t temperature_task_id = -1;
+static int32_t humidity_task_id = -1;
+static int32_t mqtt_task_id = -1;
+static int32_t light_task_id = -1;
+static uint32_t detect_task_id = -1;
+static uint32_t detect_receive_task_id = -1;
+
+static uint8_t temperature_task_run = 1;
+static uint8_t humidity_task_run = 1;
+static uint8_t light_task_run = 1;
+static uint8_t mqtt_task_run = 1;
+static uint8_t detect_task_run = 1;
+static uint8_t detect_receive_task_run = 1;
+
+static SensorData sensor_data = {0, 0.0f, 0.0f, 0.0f};
+static AdapterType g_mqtt_adapter = NULL;
 int MqttTest(void);
 
 #endif

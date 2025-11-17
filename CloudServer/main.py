@@ -4,8 +4,9 @@ import threading
 import time
 import socket
 import re
-from typing import Callable, Dict, Any, List, Optional
+from typing import Callable, Dict, Any, List, Optional, Tuple
 import paho.mqtt.client as mqtt
+import math
 
 # 配置日志
 logging.basicConfig(
@@ -17,13 +18,13 @@ logger = logging.getLogger('iot_server')
 # ------------------------------ Yeelight 设备控制相关类 ------------------------------
 class YeelightDiscoverer:
     """Yeelight设备发现器（基于UDP多播）"""
-    MULTICAST_ADDR = "239.255.255.250"  # 协议规定的多播地址
-    MULTICAST_PORT = 1982               # 协议规定的多播端口
+    MULTICAST_ADDR = "239.255.255.250"
+    MULTICAST_PORT = 1982
     SEARCH_MSG = (
         "M-SEARCH * HTTP/1.1\r\n"
         "HOST: 239.255.255.250:1982\r\n"
         'MAN: "ssdp:discover"\r\n'
-        "ST: wifi_bulb\r\n\r\n"  # 必须以空行结尾
+        "ST: wifi_bulb\r\n\r\n"
     ).encode("utf-8")
 
     @staticmethod
@@ -84,10 +85,10 @@ class YeelightClient:
         self.device_port = device_port
         self.tcp_socket: Optional[socket.socket] = None
         self.is_connected = False
-        self.msg_id = 1  # 命令消息ID（自增）
-        self.response_dict = {}  # 存储响应：{msg_id: 响应内容}
+        self.msg_id = 1
+        self.response_dict = {}
         self.response_lock = threading.Lock()
-        self.notification_callback: Optional[Callable[[Dict], None]] = None  # 状态通知回调
+        self.notification_callback: Optional[Callable[[Dict], None]] = None
         self.receive_thread: Optional[threading.Thread] = None
 
     def connect(self, notification_callback: Optional[Callable[[Dict], None]] = None) -> bool:
@@ -112,33 +113,26 @@ class YeelightClient:
         """设置非阻塞模式接收"""
         buffer = b""
         
-        # 设置非阻塞模式
         if self.tcp_socket:
             self.tcp_socket.setblocking(False)
         
         while self.is_connected and self.tcp_socket:
             try:
-                # 非阻塞接收
                 try:
                     data = self.tcp_socket.recv(1024)
                     if data:
                         buffer += data
-                        logger.debug(f"接收到 {len(data)} 字节数据")
                     else:
-                        # 对端关闭连接
                         logger.warning("TCP连接已断开")
                         self.close()
                         break
-                        
                 except BlockingIOError:
-                    # 没有数据可读，正常现象
                     pass
                 except Exception as e:
                     logger.error(f"接收数据异常: {str(e)}")
                     self.close()
                     break
                 
-                # 处理缓冲区中的完整消息
                 while b"\r\n" in buffer:
                     msg_bytes, buffer = buffer.split(b"\r\n", 1)
                     if msg_bytes:
@@ -148,7 +142,6 @@ class YeelightClient:
                         except json.JSONDecodeError:
                             logger.error(f"解析消息失败: {msg_bytes}")
                 
-                # 短暂休眠，避免CPU占用过高
                 time.sleep(0.1)
                 
             except Exception as e:
@@ -159,14 +152,10 @@ class YeelightClient:
     def _process_message(self, msg: Dict):
         """处理接收到的消息"""
         if "id" in msg:
-            # 命令响应
             msg_id = msg["id"]
             with self.response_lock:
                 self.response_dict[msg_id] = msg
-                logger.info(f"收到响应（ID: {msg_id}）: {msg}")
         elif "method" in msg and msg["method"] == "props":
-            # 状态通知
-            logger.info(f"收到状态通知: {msg}")
             if self.notification_callback:
                 self.notification_callback(msg["params"])
 
@@ -188,7 +177,6 @@ class YeelightClient:
             "params": params
         }
         command_str = json.dumps(command) + "\r\n"
-        logger.info(f"发送命令（ID: {current_id}）: {command_str.strip()}")
 
         try:
             self.tcp_socket.sendall(command_str.encode("utf-8"))
@@ -206,31 +194,38 @@ class YeelightClient:
             self.close()
             return None
 
-    # 常用控制函数
     def set_power(self, power: str, effect: str = "smooth", duration: int = 500, mode: int = 0) -> Optional[Dict]:
-        """控制灯泡开关"""
         if power not in ["on", "off"]:
             logger.error("power参数必须为'on'或'off'")
             return None
         return self.send_command("set_power", [power, effect, duration, mode])
 
     def set_brightness(self, brightness: int, effect: str = "smooth", duration: int = 500) -> Optional[Dict]:
-        """控制灯泡亮度"""
         if not (1 <= brightness <= 100):
             logger.error("亮度值必须在1-100之间")
             return None
         return self.send_command("set_bright", [brightness, effect, duration])
 
     def set_rgb(self, red: int, green: int, blue: int, effect: str = "smooth", duration: int = 500) -> Optional[Dict]:
-        """控制灯泡RGB颜色"""
         rgb_value = (red << 16) | (green << 8) | blue
         if not (0 <= rgb_value <= 16777215):
             logger.error("RGB值超出范围（0-16777215）")
             return None
         return self.send_command("set_rgb", [rgb_value, effect, duration])
 
+    def start_color_flow(self, flow_expression: List[Dict]) -> Optional[Dict]:
+        """启动颜色流动效果"""
+        # flow_expression格式: [duration, mode, value, brightness]
+        flow_params = [len(flow_expression), 0]  # 0表示颜色流动完成后停止
+        for flow in flow_expression:
+            flow_params.extend([flow['duration'], flow['mode'], flow['value'], flow['brightness']])
+        return self.send_command("start_cf", flow_params)
+
+    def stop_color_flow(self) -> Optional[Dict]:
+        """停止颜色流动效果"""
+        return self.send_command("stop_cf", [])
+
     def get_property(self, props: List[str]) -> Optional[Dict]:
-        """获取灯泡当前状态"""
         valid_props = ["power", "bright", "ct", "rgb", "hue", "sat", "color_mode", "flowing", "delayoff"]
         for prop in props:
             if prop not in valid_props:
@@ -239,7 +234,6 @@ class YeelightClient:
         return self.send_command("get_prop", props)
 
     def close(self):
-        """关闭TCP连接"""
         if self.is_connected and self.tcp_socket:
             try:
                 self.tcp_socket.close()
@@ -251,15 +245,201 @@ class YeelightClient:
                 self.tcp_socket = None
 
 
+class LightStateManager:
+    """灯泡状态管理器，根据传感器数据控制灯泡"""
+    
+    def __init__(self, light_client: YeelightClient):
+        self.light_client = light_client
+        self.last_person_state = False
+        self.last_update_time = 0
+        self.current_mode = "idle"
+        
+        # 环境状态阈值
+        self.TEMP_THRESHOLDS = {
+            "very_cold": 10,     # 很冷
+            "cold": 16,          # 冷
+            "comfortable": 22,   # 舒适
+            "warm": 28,          # 温暖
+            "hot": 32            # 热
+        }
+        
+        self.HUMIDITY_THRESHOLDS = {
+            "dry": 30,          # 干燥
+            "comfortable": 50,  # 舒适
+            "humid": 70,        # 潮湿
+            "very_humid": 80    # 很潮湿
+        }
+        
+        self.LIGHT_THRESHOLDS = {
+            "dark": 10,         # 暗
+            "dim": 50,          # 昏暗
+            "normal": 200,      # 正常
+            "bright": 500       # 明亮
+        }
+
+    def temperature_to_color(self, temperature: float) -> Tuple[int, int, int]:
+        """根据温度映射到颜色（冷色到暖色）"""
+        if temperature < self.TEMP_THRESHOLDS["very_cold"]:
+            # 很冷：深蓝色
+            return (0, 100, 255)
+        elif temperature < self.TEMP_THRESHOLDS["cold"]:
+            # 冷：蓝色到青色渐变
+            ratio = (temperature - self.TEMP_THRESHOLDS["very_cold"]) / (self.TEMP_THRESHOLDS["cold"] - self.TEMP_THRESHOLDS["very_cold"])
+            return (0, int(100 + 155 * ratio), 255)
+        elif temperature < self.TEMP_THRESHOLDS["comfortable"]:
+            # 舒适：绿色到黄色渐变
+            ratio = (temperature - self.TEMP_THRESHOLDS["cold"]) / (self.TEMP_THRESHOLDS["comfortable"] - self.TEMP_THRESHOLDS["cold"])
+            return (int(255 * ratio), 255, 0)
+        elif temperature < self.TEMP_THRESHOLDS["warm"]:
+            # 温暖：黄色到橙色渐变
+            ratio = (temperature - self.TEMP_THRESHOLDS["comfortable"]) / (self.TEMP_THRESHOLDS["warm"] - self.TEMP_THRESHOLDS["comfortable"])
+            return (255, int(255 * (1 - ratio * 0.5)), 0)
+        else:
+            # 热：橙色到红色渐变
+            ratio = min(1.0, (temperature - self.TEMP_THRESHOLDS["warm"]) / (self.TEMP_THRESHOLDS["hot"] - self.TEMP_THRESHOLDS["warm"]))
+            return (255, int(128 * (1 - ratio)), 0)
+
+    def humidity_to_effect(self, humidity: float) -> str:
+        """根据湿度决定特效类型"""
+        if humidity < self.HUMIDITY_THRESHOLDS["dry"]:
+            return "pulse_slow"  # 干燥：缓慢脉冲
+        elif humidity < self.HUMIDITY_THRESHOLDS["comfortable"]:
+            return "breath"      # 舒适：呼吸效果
+        elif humidity < self.HUMIDITY_THRESHOLDS["humid"]:
+            return "wave"        # 潮湿：波浪效果
+        else:
+            return "flash_fast"  # 很潮湿：快速闪烁
+
+    def calculate_brightness(self, light_intensity: float, person_present: bool) -> int:
+        """根据光照强度计算灯泡亮度"""
+        if not person_present:
+            return 0  # 无人时关闭亮度
+        
+        # 有人时，根据环境光照自动调整亮度
+        if light_intensity < self.LIGHT_THRESHOLDS["dark"]:
+            return 80  # 很暗环境用较高亮度
+        elif light_intensity < self.LIGHT_THRESHOLDS["dim"]:
+            return 60
+        elif light_intensity < self.LIGHT_THRESHOLDS["normal"]:
+            return 40
+        else:
+            return 20  # 明亮环境用较低亮度
+
+    def create_weather_flow(self, temperature: float, humidity: float) -> List[Dict]:
+        """创建基于温湿度的动态流动效果"""
+        base_color = self.temperature_to_color(temperature)
+        effect_speed = 1000  # 基础速度
+        
+        # 根据湿度调整速度
+        if humidity > self.HUMIDITY_THRESHOLDS["very_humid"]:
+            effect_speed = 500  # 高湿度时快速变化
+        elif humidity < self.HUMIDITY_THRESHOLDS["dry"]:
+            effect_speed = 2000  # 干燥时缓慢变化
+            
+        # 创建流动序列
+        flow_expression = []
+        
+        # 主色调
+        flow_expression.append({
+            'duration': effect_speed,
+            'mode': 1,  # RGB模式
+            'value': (base_color[0] << 16) | (base_color[1] << 8) | base_color[2],
+            'brightness': 70
+        })
+        
+        # 根据湿度添加辅助色调
+        if humidity > self.HUMIDITY_THRESHOLDS["humid"]:
+            # 高湿度：添加蓝色调波动
+            for i in range(3):
+                flow_expression.append({
+                    'duration': effect_speed // 2,
+                    'mode': 1,
+                    'value': ((base_color[0]//2) << 16) | ((base_color[1]//2) << 8) | 255,
+                    'brightness': 60 + i*5
+                })
+        elif humidity < self.HUMIDITY_THRESHOLDS["dry"]:
+            # 低湿度：添加暖色调波动
+            for i in range(2):
+                flow_expression.append({
+                    'duration': effect_speed,
+                    'mode': 1,
+                    'value': 0xFF4500,  # 橙红色
+                    'brightness': 50 + i*10
+                })
+        
+        return flow_expression
+
+    def update_light_state(self, sensor_data: Dict) -> Dict:
+        """根据传感器数据更新灯泡状态"""
+        person_present = sensor_data.get('person_present', False)
+        light_intensity = sensor_data.get('light_intensity', 0)
+        temperature = sensor_data.get('temperature', 22.0)
+        humidity = sensor_data.get('humidity', 50.0)
+        
+        brightness = self.calculate_brightness(light_intensity, person_present)
+        response = {}
+        
+        try:
+            # 控制开关
+            if person_present and not self.last_person_state:
+                # 有人进入：开灯
+                self.light_client.set_power("on", "smooth", 300)
+                self.current_mode = "active"
+                response['action'] = "light_on"
+                logger.info("检测到有人，开灯")
+                
+            elif not person_present and self.last_person_state:
+                # 无人：关灯
+                self.light_client.set_power("off", "smooth", 1000)
+                self.current_mode = "idle"
+                response['action'] = "light_off"
+                logger.info("无人，关灯")
+            
+            # 如果有人，设置亮度和颜色效果
+            if person_present:
+                # 设置亮度
+                self.light_client.set_brightness(brightness, "smooth", 500)
+                response['brightness'] = brightness
+                
+                # 停止之前的流动效果
+                self.light_client.stop_color_flow()
+                
+                # 根据温湿度创建动态效果
+                if humidity > self.HUMIDITY_THRESHOLDS["humid"] or temperature > self.TEMP_THRESHOLDS["warm"]:
+                    # 高湿度或高温度：启动流动效果
+                    flow_expression = self.create_weather_flow(temperature, humidity)
+                    self.light_client.start_color_flow(flow_expression)
+                    self.current_mode = "weather_flow"
+                    response['effect'] = "weather_flow"
+                    logger.info(f"启动天气流动效果，温度: {temperature}°C, 湿度: {humidity}%")
+                else:
+                    # 正常情况：固定颜色
+                    color = self.temperature_to_color(temperature)
+                    self.light_client.set_rgb(color[0], color[1], color[2], "smooth", 800)
+                    self.current_mode = "temperature_color"
+                    response['color'] = color
+                    response['effect'] = "temperature_based"
+                    logger.info(f"设置温度颜色: RGB{color}, 温度: {temperature}°C")
+            
+            self.last_person_state = person_present
+            self.last_update_time = time.time()
+            response['status'] = 'success'
+            response['mode'] = self.current_mode
+            
+        except Exception as e:
+            logger.error(f"控制灯泡失败: {str(e)}")
+            response['status'] = 'error'
+            response['message'] = str(e)
+        
+        return response
+
+
 # ------------------------------ MQTT 服务器相关类 ------------------------------
 class MessageHandler:
-    """消息处理器，负责注册和管理处理函数"""
-    
     def __init__(self):
         self.handlers: Dict[str, Callable] = {}
     
     def register(self, message_type: str) -> Callable:
-        """装饰器，用于注册消息处理函数"""
         def decorator(func: Callable) -> Callable:
             self.handlers[message_type] = func
             logger.info(f"Registered handler for message type: {message_type}")
@@ -267,7 +447,6 @@ class MessageHandler:
         return decorator
     
     def handle(self, message_type: str, data: Any) -> Any:
-        """根据消息类型调用相应的处理函数"""
         if message_type in self.handlers:
             try:
                 return self.handlers[message_type](data)
@@ -279,110 +458,43 @@ class MessageHandler:
             return {"status": "error", "message": f"No handler for {message_type}"}
 
 
-class MessageParser:
-    """消息解析器，负责解析原始消息"""
-    
-    @staticmethod
-    def parse(raw_message: str) -> Dict[str, Any]:
-        """解析JSON格式的消息"""
-        try:
-            message = json.loads(raw_message)
-            if "type" not in message or "data" not in message:
-                raise ValueError("Message must contain 'type' and 'data' fields")
-            return message
-        except json.JSONDecodeError:
-            logger.error("Failed to decode JSON message")
-            raise
-        except ValueError as e:
-            logger.error(f"Invalid message format: {str(e)}")
-            raise
-
-
 class IoTServer:
-    """物联网服务端主类，集成灯泡控制功能"""
-    
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.client = mqtt.Client()
         self.message_handler = MessageHandler()
-        self.message_parser = MessageParser()
-        self.light_client: Optional[YeelightClient] = None  # 灯泡客户端实例
-        self.light_state = {  # 记录当前灯泡状态
-            "power": "off",
-            "brightness": 100,
-            "rgb": (255, 255, 255),
-            "last_updated": None
-        }
+        self.light_client: Optional[YeelightClient] = None
+        self.light_state_manager: Optional[LightStateManager] = None
         
         # 设置MQTT回调
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
         
-        # 如果配置了用户名密码
         if "username" in config and "password" in config:
-            self.client.username_pw_set(
-                config["username"], 
-                config["password"]
-            )
+            self.client.username_pw_set(config["username"], config["password"])
 
-        # 初始化灯泡连接
         self._init_light_connection()
     
     def _init_light_connection(self):
-        """初始化灯泡连接（发现并连接第一个设备）"""
+        """初始化灯泡连接"""
         devices = YeelightDiscoverer.discover(timeout=5)
         if not devices:
-            logger.warning("未发现任何Yeelight设备，请检查局域网控制是否开启")
+            logger.warning("未发现任何Yeelight设备")
             return
         
-        # 选择第一个设备连接
         target_device = devices[0]
         logger.info(f"选中设备：{target_device}")
         self.light_client = YeelightClient(
             device_ip=target_device["ip"],
             device_port=target_device["port"]
         )
-        # 连接时注册状态更新回调
-        self.light_client.connect(notification_callback=self._update_light_state)
         
-        # 初始获取灯泡状态
-        self._refresh_light_state()
-    
-    def _update_light_state(self, status: Dict):
-        """更新灯泡状态（处理灯泡主动推送的通知）"""
-        with threading.Lock():
-            if "power" in status:
-                self.light_state["power"] = status["power"]
-            if "bright" in status:
-                self.light_state["brightness"] = int(status["bright"])
-            if "rgb" in status:
-                rgb_val = int(status["rgb"])
-                self.light_state["rgb"] = (
-                    (rgb_val >> 16) & 0xFF,
-                    (rgb_val >> 8) & 0xFF,
-                    rgb_val & 0xFF
-                )
-            self.light_state["last_updated"] = time.time()
-        logger.info(f"灯泡状态已更新: {self.light_state}")
-    
-    def _refresh_light_state(self):
-        """主动刷新灯泡状态"""
-        if self.light_client and self.light_client.is_connected:
-            try:
-                response = self.light_client.get_property(["power", "bright", "rgb"])
-                if response and "result" in response:
-                    power, bright, rgb = response["result"]
-                    self._update_light_state({
-                        "power": power,
-                        "bright": bright,
-                        "rgb": rgb
-                    })
-            except Exception as e:
-                logger.error(f"刷新灯泡状态失败: {str(e)}")
+        if self.light_client.connect():
+            self.light_state_manager = LightStateManager(self.light_client)
+            logger.info("灯泡状态管理器初始化完成")
     
     def _on_connect(self, client: mqtt.Client, userdata: Any, flags: Dict, rc: int):
-        """MQTT连接成功回调"""
         if rc == 0:
             logger.info("Connected to MQTT broker successfully")
             for topic in self.config["topics"]:
@@ -392,39 +504,35 @@ class IoTServer:
             logger.error(f"Failed to connect, return code {rc}")
     
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage):
-        """MQTT消息接收回调"""
         logger.info(f"Received message from topic {msg.topic}")
         
-        # 使用线程处理消息，避免阻塞MQTT客户端
-        threading.Thread(
-            target=self._process_message,
-            args=(msg.payload.decode(),),
-            daemon=True
-        ).start()
+        try:
+            payload = msg.payload.decode('utf-8')
+            message_data = json.loads(payload)
+            
+            # 处理设备状态消息
+            if 'sensor_data' in message_data:
+                sensor_data = message_data['sensor_data']
+                logger.info(f"处理传感器数据: 有人={sensor_data.get('person_present')}, "
+                           f"光照={sensor_data.get('light_intensity')}lx, "
+                           f"温度={sensor_data.get('temperature')}°C, "
+                           f"湿度={sensor_data.get('humidity')}%")
+                
+                # 使用灯泡状态管理器处理传感器数据
+                if self.light_state_manager:
+                    result = self.light_state_manager.update_light_state(sensor_data)
+                    logger.info(f"灯泡控制结果: {result}")
+                
+        except Exception as e:
+            logger.error(f"处理MQTT消息失败: {str(e)}")
     
     def _on_disconnect(self, client: mqtt.Client, userdata: Any, rc: int):
-        """MQTT断开连接回调"""
         if rc != 0:
             logger.warning(f"Unexpected disconnection with rc {rc}")
         else:
             logger.info("Disconnected from MQTT broker")
     
-    def _process_message(self, raw_message: str):
-        """处理接收到的消息"""
-        try:
-            message = self.message_parser.parse(raw_message)
-            message_type = message["type"]
-            data = message["data"]
-            
-            logger.info(f"Processing message of type: {message_type}")
-            result = self.message_handler.handle(message_type, data)
-            logger.info(f"Message processing result: {result}")
-            
-        except Exception as e:
-            logger.error(f"Error processing message: {str(e)}")
-    
     def start(self):
-        """启动服务"""
         logger.info("Starting IoT server...")
         self.client.connect(
             self.config["broker_host"],
@@ -434,7 +542,6 @@ class IoTServer:
         self.client.loop_forever()
     
     def stop(self):
-        """停止服务"""
         logger.info("Stopping IoT server...")
         if self.light_client:
             self.light_client.close()
@@ -443,51 +550,36 @@ class IoTServer:
 
 # ------------------------------ 程序入口 ------------------------------
 if __name__ == "__main__":
-    # 配置
     config = {
         "broker_host": "localhost",
         "broker_port": 1883,
-        "username": "",  # MQTT broker用户名（可选）
-        "password": "",  # MQTT broker密码（可选）
-        "topics": ["iot/devices/#"]  # 订阅的MQTT主题
+        "username": "",
+        "password": "",
+        "topics": ["iot/devices/#"]
     }
     
-    # 创建服务器实例（会自动发现并连接灯泡）
     server = IoTServer(config)
     
-    # 注册消息处理函数（处理设备数据和控制命令）
-    @server.message_handler.register("device_data")
-    def handle_device_data(data):
-        """处理设备发送的数据信息（格式：{"name": "属性名", "value": 值}）"""
-        if not isinstance(data, dict) or "name" not in data or "value" not in data:
-            return {"status": "error", "message": "Invalid data format"}
-        
-        logger.info(f"Received device data: {data['name']} = {data['value']}")
-        return {"status": "success", "message": "Data processed"}
-    
+    # 注册其他消息处理函数
     @server.message_handler.register("control_command")
     def handle_control_command(data):
-        """处理控制命令（格式：{"command": "命令名", ...参数...}）"""
-        if not isinstance(data, dict) or "command" not in data:
-            return {"status": "error", "message": "Invalid command format"}
-        
+        """处理手动控制命令"""
         if not server.light_client or not server.light_client.is_connected:
             return {"status": "error", "message": "Light not connected"}
         
-        command = data["command"]
+        command = data.get("command", "")
         try:
             if command == "turn_on":
                 response = server.light_client.set_power("on")
             elif command == "turn_off":
                 response = server.light_client.set_power("off")
-            elif command == "set_brightness" and "value" in data:
-                response = server.light_client.set_brightness(int(data["value"]))
-            elif command == "set_color" and "r" in data and "g" in data and "b" in data:
-                response = server.light_client.set_rgb(
-                    int(data["r"]), int(data["g"]), int(data["b"])
-                )
             elif command == "get_state":
-                return {"status": "success", "data": server.light_state}
+                if server.light_state_manager:
+                    return {
+                        "status": "success", 
+                        "mode": server.light_state_manager.current_mode,
+                        "last_update": server.light_state_manager.last_update_time
+                    }
             else:
                 return {"status": "error", "message": f"Unknown command: {command}"}
             
@@ -495,7 +587,6 @@ if __name__ == "__main__":
         except Exception as e:
             return {"status": "error", "message": str(e)}
     
-    # 启动服务器
     try:
         server.start()
     except KeyboardInterrupt:

@@ -1,97 +1,5 @@
 #include "normal_app.h"
 
-// 头文件把“运行状态/任务 ID”定义成了静态变量，任何包含该头的源文件都会有各自的副本，容易导致状态不一致。应改为在 .c 中定义、在 .h 中 extern 声明
-static int32_t temperature_task_id = -1;
-static int32_t humidity_task_id = -1;
-static int32_t mqtt_task_id = -1;
-static int32_t light_task_id = -1;
-static uint32_t detect_task_id = -1;
-static uint32_t detect_receive_task_id = -1;
-
-static uint8_t temperature_task_run = 1;
-static uint8_t humidity_task_run = 1;
-static uint8_t light_task_run = 1;
-static uint8_t mqtt_task_run = 1;
-static uint8_t detect_task_run = 1;
-static uint8_t detect_receive_task_run = 1;
-
-static SensorData sensor_data = {0, 0.0f, 0.0f, 0.0f};
-static AdapterType g_mqtt_adapter = NULL;
-
-// static void PrintAdapterInfo(struct Adapter* adapter) 
-// {
-//     if (!adapter) {
-//         printf("[Adapter] NULL pointer\n");
-//         return;
-//     }
-
-//     const char *sock_proto_str = "UNKNOWN";
-//     if (adapter->socket.protocal == SOCKET_PROTOCOL_TCP) sock_proto_str = "TCP";
-//     else if (adapter->socket.protocal == SOCKET_PROTOCOL_UDP) sock_proto_str = "UDP";
-
-//     printf("======== Adapter Dump ========\n");
-//     printf("name: %s\n", adapter->name);
-//     printf("fd: %d\n", adapter->fd);
-//     printf("product_info_flag: %d\n", adapter->product_info_flag);
-
-//     // ATAgent
-//     if (adapter->agent) {
-//         struct ATAgent *ag = adapter->agent;
-//         printf("agent.agent_name: %s\n", ag->agent_name);
-//         printf("agent.fd: %d\n", ag->fd);
-//         printf("agent.read_len: %d\n", ag->read_len);
-//         printf("agent.maintain_buffer: %p\n", ag->maintain_buffer);
-//         printf("agent.maintain_len/max: %u/%u\n", ag->maintain_len, ag->maintain_max);
-//         printf("agent.reply: %p\n", ag->reply);
-//         if (ag->reply) {
-//             printf("  reply.reply_buffer: %p\n", ag->reply->reply_buffer);
-//             printf("  reply.reply_len/max: %u/%u\n", ag->reply->reply_len, ag->reply->reply_max_len);
-//         }
-//         printf("agent.reply_lr_end: %d\n", ag->reply_lr_end);
-//         printf("agent.reply_end_last_char: '%c'\n", ag->reply_end_last_char ? ag->reply_end_last_char : ' ');
-//         printf("agent.reply_end_char: '%c'\n", ag->reply_end_char ? ag->reply_end_char : ' ');
-//         printf("agent.reply_char_num: %u\n", ag->reply_char_num);
-//         printf("agent.at_handler: %p\n", (void*)ag->at_handler);
-//         printf("agent.entm_recv_len: %u\n", ag->entm_recv_len);
-//         printf("agent.receive_mode: %d\n", ag->receive_mode);
-//         printf("agent.entm_rx_notice: %p\n", (void*)&ag->entm_rx_notice);
-//         // 不直接打印 entm_recv_buf 内容（可能包含二进制），仅打印地址
-//         printf("agent.entm_recv_buf: %p\n", (void*)ag->entm_recv_buf);
-//         printf("agent.lock: %p\n", (void*)&ag->lock);
-//         printf("agent.rsp_sem: %p\n", (void*)&ag->rsp_sem);
-//     } else {
-//         printf("agent: NULL\n");
-//     }
-
-//     // Socket
-//     printf("socket.type: %u\n", adapter->socket.type);
-//     printf("socket.protocal: %u (%s)\n", adapter->socket.protocal, sock_proto_str);
-//     printf("socket.listen_port: %u\n", adapter->socket.listen_port);
-//     printf("socket.socket_id: %u\n", adapter->socket.socket_id);
-//     printf("socket.recv_control: %u\n", adapter->socket.recv_control);
-//     printf("socket.af_type: %u\n", adapter->socket.af_type);
-//     printf("socket.src_ip_addr: %s\n", adapter->socket.src_ip_addr ? adapter->socket.src_ip_addr : "(null)");
-//     printf("socket.dst_ip_addr: %s\n", adapter->socket.dst_ip_addr ? adapter->socket.dst_ip_addr : "(null)");
-
-//     // 基本状态
-//     printf("net_role_id: %d\n", adapter->net_role_id);
-//     printf("net_protocol: %d (%s)\n", adapter->net_protocol, proto_str);
-//     printf("net_role: %d (%s)\n", adapter->net_role, role_str);
-//     printf("adapter_status: %d (%s)\n", adapter->adapter_status, status_str);
-
-//     // NetworkInfo
-//     printf("network_info.carrier: %s\n", carrier_str);
-//     printf("network_info.signal_strength: %d\n", adapter->network_info.signal_strength);
-//     printf("network_info.ip_address: %s\n", adapter->network_info.ip_address);
-
-//     // buffer[64] 以十六进制打印
-//     printf("buffer[64] (hex):");
-//     for (int i = 0; i < ADAPTER_BUFFSIZE; ++i) {
-//         printf(" %02X", (unsigned char)adapter->buffer[i]);
-//     }
-//     printf("\n");
-// } 
-
 int WifiInitAndConnect(char* ssid, char* password)
 {
     int ret = 0;
@@ -103,8 +11,6 @@ int WifiInitAndConnect(char* ssid, char* password)
         return -1;
     }
 
-    // PrintAdapterInfo(adapter);
-
     // 2. 打开Wi-Fi设备
     ret = AdapterDeviceOpen(adapter);
     if (ret != 0) {
@@ -115,37 +21,6 @@ int WifiInitAndConnect(char* ssid, char* password)
 
     AdapterDeviceDisconnect(adapter, NULL);
     PrivTaskDelay(3000);
-
-    // PrintAdapterInfo(adapter);
-
-    // ******** reset后需要先断开wifi连接 *********
-    // 在连接前判断是否已连接到 AP 先别急
-    // int already_connected = 0;
-    // if (adapter->agent) {
-    //     ATReplyType reply = CreateATReply(256);
-    //     if (reply) {
-    //         // 查询当前 AP 连接状态
-    //         if (ATOrderSend(adapter->agent, REPLY_TIME_OUT, reply, "AT+CWJAP?\r\n") >= 0) {
-    //             char *text = GetReplyText(reply);
-    //             if (text) {
-    //                 // 典型已连接返回: +CWJAP:"<ssid>",...
-    //                 // 未连接返回: No AP
-    //                 if (strstr(text, "+CWJAP:\"")) {
-    //                     printf("Wi-Fi already connected: %s\n", text);
-    //                     already_connected = 1;
-    //                 } else {
-    //                     already_connected = 0;
-    //                 }
-    //             }
-    //         }
-    //         DeleteATReply(reply);
-    //     }
-    // }
-    // if (already_connected) {
-    //     // 已有连接，跳过 Setup
-    //     printf("Skip Wi-Fi setup; already connected.\n");
-    //     return 0;
-    // }
 
     // 3. 配置Wi-Fi连接参数（使用宏定义）
     static struct WifiParam param;
@@ -203,9 +78,6 @@ void TemperatureTask(void *parameter)
         UserTaskDelay(2000);
         cycle_count++;
     }
-    // SensorQuantityClose(temp);
-    // printf(" Temperature task completed after %d cycles\n", cycle_count);
-    // UserTaskQuit();
 }
 
 /**
@@ -231,9 +103,6 @@ void HumidityTask(void *parameter)
         UserTaskDelay(2000);
         cycle_count++;
     }
-    // SensorQuantityClose(humi);
-    // printf(" Humidity task completed after %d cycles\n", cycle_count);
-    // UserTaskQuit(); 
 }
 
 void LightTask(void *parameter)
@@ -521,7 +390,6 @@ void MqttEdgeDeviceTask(MqttServerAddr* mqtt_server_addr)
     int ret;
     DeviceState current_state = STATE_NO_PERSON;
     DeviceState previous_state = STATE_NO_PERSON;
-    LightControl light_ctrl = {0};
 
     // 查找并初始化WiFi适配器，沿用 MqttTest 的连接方式
     g_mqtt_adapter = AdapterDeviceFindByName(ADAPTER_WIFI_NAME);
@@ -640,8 +508,6 @@ MQTT_CONNECT:
             current_state = STATE_NORMAL;
         }
 
-        // 根据状态生成灯光控制命令
-        GenerateLightControl(current_state, &light_ctrl);
 
         // 发布设备状态（不再使用 AdapterDeviceMqttSend，改用 QOS0 发布）
         {
@@ -660,13 +526,6 @@ MQTT_CONNECT:
                 "high_humidity", "high_temperature", "normal"
             };
             cJSON_AddStringToObject(root, "device_state", state_str[current_state]);
-
-            // cJSON *control = cJSON_CreateObject();
-            // cJSON_AddBoolToObject(control, "power", light_ctrl.power);
-            // cJSON_AddNumberToObject(control, "brightness", light_ctrl.brightness);
-            // cJSON_AddNumberToObject(control, "color_temp", light_ctrl.color_temp);
-            // cJSON_AddNumberToObject(control, "color_mode", light_ctrl.color_mode);
-            // cJSON_AddItemToObject(root, "light_control", control);
 
             char *json_str = cJSON_PrintUnformatted(root);
             lw_print("Publishing: %s\n", json_str);
@@ -696,8 +555,6 @@ MQTT_CONNECT:
         no_mqtt_msg_exchange = 1;
     }
 
-    // 清理资源，活不到这一天，按下reset一键清理
-    // AdapterDeviceMqttDisconnect(g_mqtt_adapter);
 }
 
 // 处理接收到的MQTT消息
@@ -736,192 +593,7 @@ SensorData GetSensorDataFromQueue(void)
     sensor_data.humidity = GetHumidity();                  // 获取湿度
     
     return sensor_data;
-
-    // 这里模拟从消息队列获取数据
-	static uint32_t call_count = 0;
-    static uint8_t scenario_index = 0;
-    
-    SensorData data = {0};
-    
-    // 6种场景循环，对应6种状态
-    scenario_index = call_count % 6;
-    
-    switch (scenario_index) {
-        case 0: // STATE_NO_PERSON - 无人状态
-            data.person_present = 0;
-            data.light_intensity = 40.0f;  // 中等光照
-            data.temperature = 26.0f;
-            data.humidity = 55.0f;
-            break;
-            
-        case 1: // STATE_PERSON_ENTER - 人员进入
-            data.person_present = 1;
-            data.light_intensity = 45.0f;  // 中等光照
-            data.temperature = 26.5f;
-            data.humidity = 56.0f;
-            break;
-            
-        case 2: // STATE_PERSON_DARK - 有人+暗光
-            data.person_present = 1;
-            data.light_intensity = 15.0f;  // 暗光环境
-            data.temperature = 25.5f;
-            data.humidity = 58.0f;
-            break;
-            
-        case 3: // STATE_PERSON_BRIGHT - 有人+明光
-            data.person_present = 1;
-            data.light_intensity = 85.0f;  // 明亮环境
-            data.temperature = 27.0f;
-            data.humidity = 52.0f;
-            break;
-            
-        case 4: // STATE_HIGH_HUMIDITY - 高湿度
-            data.person_present = 1;
-            data.light_intensity = 50.0f;
-            data.temperature = 28.0f;
-            data.humidity = 88.0f;  // 高湿度
-            break;
-            
-        case 5: // STATE_HIGH_TEMPERATURE - 高温
-            data.person_present = 1;
-            data.light_intensity = 55.0f;
-            data.temperature = 35.0f;  // 高温
-            data.humidity = 60.0f;
-            break;
-    }
-    
-    // 添加小范围随机波动，使数据更真实
-    data.light_intensity += (rand() % 10) * 0.5f - 2.5f;
-    data.temperature += (rand() % 10) * 0.1f - 0.5f;
-    data.humidity += (rand() % 10) * 0.2f - 1.0f;
-    
-    // 确保数据在合理范围内
-    if (data.light_intensity < 0) data.light_intensity = 0;
-    if (data.light_intensity > 100) data.light_intensity = 100;
-    if (data.temperature < -10) data.temperature = -10;
-    if (data.temperature > 50) data.temperature = 50;
-    if (data.humidity < 0) data.humidity = 0;
-    if (data.humidity > 100) data.humidity = 100;
-    
-    call_count++;
-    
-    // 打印模拟数据用于调试
-    lw_print("Sensor Data[场景%d]: 人员=%d, 光照=%.1f, 温度=%.1f°C, 湿度=%.1f%%\n",
-             scenario_index, data.person_present, data.light_intensity, 
-             data.temperature, data.humidity);
-    
-    return data;
 }
-
-/**
- * @brief 根据设备状态生成灯光控制命令
- * @param state 当前设备状态
- * @param ctrl 灯光控制结构体指针
- */
-void GenerateLightControl(DeviceState state, LightControl *ctrl)
-{
-    switch(state) {
-        case STATE_NO_PERSON:
-            ctrl->power = 0;       // 关灯
-            ctrl->brightness = 0;
-            ctrl->color_temp = 0;
-            break;
-            
-        case STATE_PERSON_ENTER:
-            ctrl->power = 1;       // 开灯，中等亮度，中性色温
-            ctrl->brightness = 60;
-            ctrl->color_temp = 1;
-            break;
-            
-        case STATE_PERSON_DARK:
-            ctrl->power = 1;       // 开灯，高亮度，暖色调
-            ctrl->brightness = 90;
-            ctrl->color_temp = 2;
-            break;
-            
-        case STATE_PERSON_BRIGHT:
-            ctrl->power = 1;       // 开灯，低亮度，冷色调
-            ctrl->brightness = 30;
-            ctrl->color_temp = 0;
-            break;
-            
-        case STATE_HIGH_HUMIDITY:
-        case STATE_HIGH_TEMPERATURE:
-            ctrl->power = 1;       // 开灯，中等亮度，冷色调（给人凉爽感）
-            ctrl->brightness = 70;
-            ctrl->color_temp = 0;
-            break;
-            
-        case STATE_NORMAL:
-            ctrl->power = 1;       // 开灯，舒适亮度，中性色温
-            ctrl->brightness = 50;
-            ctrl->color_temp = 1;
-            break;
-    }
-    ctrl->color_mode = 0; // 自动模式
-}
-
-/**
- * @brief 发布设备状态到MQTT
- * @param fd socket描述符
- * @param sensor_data 传感器数据
- * @param state 设备状态
- * @param light_ctrl 灯光控制命令
- */
-// 使用适配器API发布设备状态
-void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, LightControl light_ctrl)
-{
-    cJSON *root = cJSON_CreateObject();
-    
-    // 添加设备信息
-    cJSON_AddStringToObject(root, "device_id", "xiuos_device_001");
-    
-    // 添加传感器数据
-    cJSON *sensors = cJSON_CreateObject();
-    cJSON_AddBoolToObject(sensors, "person_present", sensor_data.person_present);
-    cJSON_AddNumberToObject(sensors, "light_intensity", sensor_data.light_intensity);
-    cJSON_AddNumberToObject(sensors, "temperature", sensor_data.temperature);
-    cJSON_AddNumberToObject(sensors, "humidity", sensor_data.humidity);
-    cJSON_AddItemToObject(root, "sensor_data", sensors);
-    
-    // 添加设备状态
-    const char *state_str[] = {
-        "no_person", "person_enter", "person_dark", "person_bright",
-        "high_humidity", "high_temperature", "normal"
-    };
-    cJSON_AddStringToObject(root, "device_state", state_str[state]);
-    
-    // 添加控制命令
-    cJSON *control = cJSON_CreateObject();
-    cJSON_AddBoolToObject(control, "power", light_ctrl.power);
-    cJSON_AddNumberToObject(control, "brightness", light_ctrl.brightness);
-    cJSON_AddNumberToObject(control, "color_temp", light_ctrl.color_temp);
-    cJSON_AddNumberToObject(control, "color_mode", light_ctrl.color_mode);
-    cJSON_AddItemToObject(root, "light_control", control);
-    
-    // 生成JSON字符串
-    char *json_str = cJSON_PrintUnformatted(root);
-    lw_print("Publishing: %s\n", json_str);
-    
-    // 使用适配器API发布消息
-    const char *publish_topic = "iot/devices/status";
-    ssize_t send_len = AdapterDeviceMqttSend(g_mqtt_adapter, publish_topic, json_str, strlen(json_str));
-    
-    if (send_len < 0) {
-        lw_print("Publish failed: %d\n", send_len);
-    } else {
-        lw_print("Publish success, len: %d\n", send_len);
-    }
-    
-    // 清理资源
-    cJSON_free(json_str);
-    cJSON_Delete(root);
-}
-
-
-
-// PRIV_SHELL_CMD_FUNCTION(MqttEdgeDeviceTask, IoT edge device MQTT client, PRIV_SHELL_CMD_MAIN_ATTR);
-
 
 /**
  * 检测人员存在
@@ -930,14 +602,6 @@ void PublishDeviceStatusUsingAdapter(SensorData sensor_data, DeviceState state, 
 uint8_t CheckPersonPresence(void)
 {
     return sensor_data.person_present;
-
-    // 简单实现：模拟随机的人员检测
-    // 在实际应用中，这里应该读取红外传感器或摄像头数据
-    static unsigned int call_count = 0;
-    call_count++;
-    
-    // 每5次调用中有1次检测到人员（模拟随机检测）
-    return (call_count % 5 == 0) ? 1 : 0;
 }
 
 /**
@@ -947,16 +611,6 @@ uint8_t CheckPersonPresence(void)
 float GetLightIntensity(void)
 {
     return sensor_data.light_intensity;
-
-    // 简单实现：模拟光照强度读数
-    // 在实际应用中，这里应该读取光照传感器数据
-    static unsigned int call_count = 0;
-    call_count++;
-    
-    // 模拟光照强度在100-1000 lux之间变化
-    float base_light = 300.0f;
-    float variation = (float)(call_count % 200); // 0-199的变化
-    return base_light + variation;
 }
 
 /**
@@ -966,16 +620,6 @@ float GetLightIntensity(void)
 float GetTemperature(void)
 {
     return sensor_data.temperature;
-
-    // 简单实现：模拟温度读数
-    // 在实际应用中，这里应该读取温度传感器数据
-    static unsigned int call_count = 0;
-    call_count++;
-    
-    // 模拟温度在20.0-30.0°C之间缓慢变化
-    float base_temp = 25.0f;
-    float variation = (float)(call_count % 100) / 10.0f; // 0.0-9.9的变化
-    return base_temp + (variation - 4.95f); // 在20.05-29.95之间
 }
 
 /**
@@ -985,16 +629,6 @@ float GetTemperature(void)
 float GetHumidity(void)
 {
     return sensor_data.humidity;
-
-    // 简单实现：模拟湿度读数
-    // 在实际应用中，这里应该读取湿度传感器数据
-    static unsigned int call_count = 0;
-    call_count++;
-    
-    // 模拟湿度在40%-80%之间变化
-    float base_humidity = 60.0f;
-    float variation = (float)(call_count % 40); // 0-39的变化
-    return base_humidity + (variation - 19.5f); // 在40.5-79.5之间
 }
 
 int MqttTest()
